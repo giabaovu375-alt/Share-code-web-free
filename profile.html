@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Hồ sơ của tôi – CodeHub</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span></div>
+        <a href="index.html" class="back-link" style="color:var(--accent);"><i class="fas fa-arrow-left"></i> Quay lại</a>
+    </header>
+
+    <main class="profile-container" id="profileContainer">
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="avatar-wrapper" id="avatarWrapper">
+                    <img id="avatarImg" class="avatar-img" src="https://via.placeholder.com/120" alt="avatar">
+                    <button id="uploadAvatarBtn" class="avatar-upload-btn"><i class="fas fa-camera"></i></button>
+                    <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/gif" style="display: none;">
+                </div>
+                <h2 id="profileName" class="profile-name">Người dùng</h2>
+                <p id="profileEmail" class="profile-email">email@example.com</p>
+            </div>
+
+            <div class="profile-stats" id="profileStats">
+                <div class="stat-item"><div class="stat-value" id="statCodes">0</div><div class="stat-label">Đã tải</div></div>
+                <div class="stat-item"><div class="stat-value" id="statFavorites">0</div><div class="stat-label">Yêu thích</div></div>
+                <div class="stat-item"><div class="stat-value" id="statSubmit">0</div><div class="stat-label">Đã gửi</div></div>
+            </div>
+
+            <form id="profileForm" class="profile-form">
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> Tên hiển thị</label>
+                    <input type="text" id="displayName" placeholder="Tên của bạn">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-phone"></i> Số điện thoại</label>
+                    <input type="tel" id="phone" placeholder="Số điện thoại (tùy chọn)">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-info-circle"></i> Giới thiệu</label>
+                    <textarea id="bio" placeholder="Đôi lời về bạn..."></textarea>
+                </div>
+                <button type="submit" class="save-btn"><i class="fas fa-save"></i> Lưu thay đổi</button>
+                <button type="button" id="logoutProfileBtn" class="save-btn logout-btn-profile"><i class="fas fa-sign-out-alt"></i> Đăng xuất</button>
+            </form>
+        </div>
+    </main>
+
+    <footer class="footer"><p>© 2025 CodeHub – Chia sẻ code miễn phí</p></footer>
+
+    <script type="module" src="js/firebase-config.js"></script>
+    <script type="module" src="js/app.js"></script>
+    <script type="module">
+        import { auth, db, storage, onAuthStateChanged, updateProfile, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, ref, uploadBytes, getDownloadURL } from './js/firebase-config.js';
+
+        // DOM elements
+        const avatarImg = document.getElementById('avatarImg');
+        const uploadBtn = document.getElementById('uploadAvatarBtn');
+        const avatarInput = document.getElementById('avatarInput');
+        const profileName = document.getElementById('profileName');
+        const profileEmail = document.getElementById('profileEmail');
+        const displayNameInput = document.getElementById('displayName');
+        const phoneInput = document.getElementById('phone');
+        const bioInput = document.getElementById('bio');
+        const profileForm = document.getElementById('profileForm');
+        const logoutBtn = document.getElementById('logoutProfileBtn');
+        const statCodes = document.getElementById('statCodes');
+        const statFavorites = document.getElementById('statFavorites');
+        const statSubmit = document.getElementById('statSubmit');
+
+        let currentUser = null;
+        let userDocRef = null;
+
+        // Load user data from Firestore
+        async function loadUserProfile(user) {
+            if (!user) return;
+            userDocRef = doc(db, 'users', user.uid);
+            const docSnap = await getDoc(userDocRef);
+            let data = docSnap.exists() ? docSnap.data() : {};
+            
+            // Auth info
+            profileEmail.innerText = user.email;
+            profileName.innerText = data.displayName || user.email.split('@')[0];
+            displayNameInput.value = data.displayName || '';
+            phoneInput.value = data.phone || '';
+            bioInput.value = data.bio || '';
+            
+            // Avatar
+            if (data.avatarURL) {
+                avatarImg.src = data.avatarURL;
+            } else if (user.photoURL) {
+                avatarImg.src = user.photoURL;
+            }
+            
+            // Stats
+            // 1. Đã tải: đếm documents trong collection 'download_history' của user
+            const qDownloads = query(collection(db, 'download_history'), where('userId', '==', user.uid));
+            const downloadsSnap = await getDocs(qDownloads);
+            statCodes.innerText = downloadsSnap.size;
+            
+            // 2. Yêu thích: tương tự với collection 'favorites'
+            const qFav = query(collection(db, 'favorites'), where('userId', '==', user.uid));
+            const favSnap = await getDocs(qFav);
+            statFavorites.innerText = favSnap.size;
+            
+            // 3. Đã gửi code (code submitted): collection 'submitted_codes', where userId == user.uid
+            const qSub = query(collection(db, 'submitted_codes'), where('userId', '==', user.uid));
+            const subSnap = await getDocs(qSub);
+            statSubmit.innerText = subSnap.size;
+        }
+
+        // Upload avatar
+        uploadBtn.onclick = () => avatarInput.click();
+        avatarInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file || !currentUser) return;
+            const storageRef = ref(storage, `avatars/${currentUser.uid}`);
+            try {
+                await uploadBytes(storageRef, file);
+                const url = await getDownloadURL(storageRef);
+                // Update Auth profile (optional)
+                await updateProfile(currentUser, { photoURL: url });
+                // Update Firestore
+                await setDoc(doc(db, 'users', currentUser.uid), { avatarURL: url }, { merge: true });
+                avatarImg.src = url;
+                alert('Avatar đã được cập nhật!');
+            } catch (err) {
+                console.error(err);
+                alert('Lỗi upload ảnh: ' + err.message);
+            }
+        };
+
+        // Save profile info
+        profileForm.onsubmit = async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+            const newDisplayName = displayNameInput.value.trim();
+            const phone = phoneInput.value.trim();
+            const bio = bioInput.value.trim();
+            
+            try {
+                // Update Auth displayName (nếu có)
+                if (newDisplayName) {
+                    await updateProfile(currentUser, { displayName: newDisplayName });
+                }
+                // Update Firestore
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    displayName: newDisplayName,
+                    phone: phone,
+                    bio: bio,
+                    updatedAt: new Date()
+                }, { merge: true });
+                
+                profileName.innerText = newDisplayName || currentUser.email.split('@')[0];
+                alert('Đã lưu thông tin!');
+            } catch (err) {
+                alert('Lỗi: ' + err.message);
+            }
+        };
+
+        // Logout
+        logoutBtn.onclick = async () => {
+            await signOut(auth);
+            window.location.href = 'index.html';
+        };
+
+        // Auth state
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                // Chưa đăng nhập, chuyển về trang chủ
+                window.location.href = 'index.html';
+                return;
+            }
+            currentUser = user;
+            await loadUserProfile(user);
+        });
+    </script>
+</body>
+</html>
