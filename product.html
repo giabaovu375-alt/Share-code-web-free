@@ -1,1 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết code – CodeHub</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* slider ảnh demo */
+        .demo-slider {
+            display: flex;
+            overflow-x: auto;
+            gap: 12px;
+            padding: 16px 0;
+            scroll-snap-type: x mandatory;
+        }
+        .demo-slider img {
+            width: 100%;
+            max-width: 280px;
+            border-radius: 16px;
+            scroll-snap-align: start;
+            border: 1px solid var(--border);
+        }
+        .download-btn {
+            background: var(--accent);
+            color: #000;
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            transition: 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .download-btn:hover { background: var(--accent-dark); transform: scale(1.02); }
+        .error-box {
+            background: #2a1a1a;
+            border-left: 4px solid #ff6666;
+            padding: 16px;
+            margin: 20px 0;
+            border-radius: 12px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent);
+            text-decoration: none;
+        }
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span></div>
+        <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Quay lại</a>
+    </header>
+    <main class="container" id="productDetail">
+        <!-- Nội dung sẽ được JS load -->
+        <div style="text-align:center; padding:40px;">Đang tải...</div>
+    </main>
+    <footer class="footer">
+        <p>© 2025 CodeHub – Chia sẻ code miễn phí</p>
+    </footer>
 
+    <script type="module">
+        import { db, doc, getDoc, updateDoc, increment } from './js/firebase-config.js';
+
+        // Dữ liệu sản phẩm mẫu (đồng bộ với app.js)
+        const productsData = [
+            { id:"code1", name:"Code Game Bắn Súng HTML5", demoImages:["images/game1_1.jpg","images/game1_2.jpg"], description:"Game bắn súng góc nhìn thứ nhất, HTML/CSS/JS thuần, responsive.", downloadLink:"https://www.mediafire.com/file/xxxxx", notes:"- Lỗi: không load ảnh do path sai.\n- Cần chạy bằng live server." },
+            { id:"code2", name:"Web Shop Giày Thể Thao", demoImages:["images/shop1_1.jpg","images/shop1_2.jpg","images/shop1_3.jpg"], description:"Giao diện shop giày, giỏ hàng localStorage.", downloadLink:"https://www.mediafire.com/file/yyyyy", notes:"- Chưa thanh toán.\n- Ảnh sản phẩm tự thay." },
+            { id:"code3", name:"Web Xem Phim (embed)", demoImages:["images/film1_1.jpg"], description:"Web xem phim, tìm kiếm, embed từ nhiều nguồn.", downloadLink:"https://www.mediafire.com/file/zzzzz", notes:"- Nguồn embed có thể bị chặn.\n- Cập nhật link thường xuyên." }
+        ];
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+        const product = productsData.find(p => p.id === productId);
+
+        if (!product) {
+            document.getElementById('productDetail').innerHTML = '<p style="color:red; text-align:center;">Không tìm thấy sản phẩm.</p>';
+        } else {
+            // Cập nhật lượt xem trên Firestore
+            const statRef = doc(db, "stats", product.id);
+            await updateDoc(statRef, { views: increment(1) }).catch(async () => {
+                // Nếu chưa có thì tạo mới
+                await setDoc(statRef, { views: 1, downloads: 0 });
+            });
+
+            // Hiển thị chi tiết sản phẩm
+            const demoHtml = product.demoImages.map(src => `<img src="${src}" alt="demo">`).join('');
+            document.getElementById('productDetail').innerHTML = `
+                <div class="product-header">
+                    <h1>${product.name}</h1>
+                </div>
+                <div class="demo-slider">${demoHtml}</div>
+                <p><strong>Mô tả:</strong> ${product.description}</p>
+                <div class="error-box">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Lỗi thường gặp & cách khắc phục:</strong><br>
+                    ${product.notes.replace(/\n/g, '<br>')}
+                </div>
+                <button id="downloadNow" class="download-btn"><i class="fas fa-download"></i> Tải code ngay (Mediafire)</button>
+            `;
+
+            document.getElementById('downloadNow').addEventListener('click', async () => {
+                // Cập nhật lượt tải
+                await updateDoc(statRef, { downloads: increment(1) }).catch(() => {});
+                window.open(product.downloadLink, '_blank');
+            });
+        }
+    </script>
+</body>
+</html>
