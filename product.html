@@ -8,43 +8,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        .demo-slider {
-            display: flex;
-            overflow-x: auto;
-            gap: 12px;
-            padding: 16px 0;
-            scroll-snap-type: x mandatory;
-        }
-        .demo-slider img {
-            max-width: 280px;
-            border-radius: 16px;
-            scroll-snap-align: start;
-            border: 1px solid var(--border);
-        }
-        .download-btn {
-            background: var(--accent);
-            color: #000;
-            padding: 12px 28px;
-            border-radius: 40px;
-            font-weight: bold;
-            border: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
+        .demo-slider { display: flex; overflow-x: auto; gap: 12px; padding: 16px 0; scroll-snap-type: x mandatory; }
+        .demo-slider img { max-width: 280px; border-radius: 16px; scroll-snap-align: start; border: 1px solid var(--border); }
+        .download-btn { background: var(--accent); color: #000; padding: 12px 28px; border-radius: 40px; font-weight: bold; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; margin-top: 20px; }
         .download-btn:hover { background: var(--accent-dark); transform: scale(1.02); }
-        .error-box {
-            background: #2a1a1a;
-            border-left: 4px solid #ff6666;
-            padding: 16px;
-            margin: 20px 0;
-            border-radius: 12px;
-        }
+        .favorite-btn { background: var(--bg-card); border: 1px solid var(--border); color: #ff6b6b; padding: 12px 20px; border-radius: 40px; cursor: pointer; margin-left: 16px; }
+        .favorite-btn.active { background: #ff6b6b; color: white; border-color: #ff6b6b; }
+        .error-box { background: #2a1a1a; border-left: 4px solid #ff6666; padding: 16px; margin: 20px 0; border-radius: 12px; }
         .back-link { display: inline-block; margin-bottom: 20px; color: var(--accent); text-decoration: none; }
         .product-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
         #productDetail { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .action-buttons { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
     </style>
 </head>
 <body>
@@ -54,7 +28,131 @@
     </header>
     <main id="productDetail"></main>
     <footer class="footer"><p>© 2025 CodeHub – Chia sẻ code miễn phí</p></footer>
-    <script type="module" src="js/firebase-config.js"></script>
-    <script type="module" src="js/app.js"></script>
+    <script type="module">
+        import { auth, db, doc, getDoc, updateDoc, increment, onAuthStateChanged, addDoc, deleteDoc, collection, query, where, getDocs } from './js/firebase-config.js';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+
+        let product = null;
+        let currentUser = null;
+
+        // Fetch sản phẩm từ data/products.json
+        async function loadProduct() {
+            const res = await fetch('data/products.json');
+            const products = await res.json();
+            product = products.find(p => p.id === productId);
+            if (!product) {
+                document.getElementById('productDetail').innerHTML = '<p class="error">Không tìm thấy sản phẩm.</p>';
+                return;
+            }
+            // Tăng view
+            await incrementView(product.id);
+            renderProduct();
+            if (currentUser) {
+                const isFav = await isFavorite(product.id, currentUser.uid);
+                updateFavButton(isFav);
+            }
+        }
+
+        async function incrementView(productId) {
+            const statRef = doc(db, 'stats', productId);
+            await updateDoc(statRef, { views: increment(1) }).catch(async () => {
+                await setDoc(statRef, { views: 1, downloads: 0 });
+            });
+        }
+
+        async function getStats(productId) {
+            const statRef = doc(db, 'stats', productId);
+            const snap = await getDoc(statRef);
+            return snap.exists() ? snap.data() : { views: 0, downloads: 0 };
+        }
+
+        async function incrementDownload(productId) {
+            const statRef = doc(db, 'stats', productId);
+            await updateDoc(statRef, { downloads: increment(1) }).catch(async () => {
+                await setDoc(statRef, { views: 0, downloads: 1 });
+            });
+        }
+
+        // Favorite helpers
+        async function isFavorite(productId, userId) {
+            const q = query(collection(db, 'favorites'), where('userId', '==', userId), where('productId', '==', productId));
+            const snap = await getDocs(q);
+            return !snap.empty;
+        }
+        async function addFavorite(productId, userId) {
+            await addDoc(collection(db, 'favorites'), { userId, productId, favoritedAt: new Date() });
+        }
+        async function removeFavorite(productId, userId) {
+            const q = query(collection(db, 'favorites'), where('userId', '==', userId), where('productId', '==', productId));
+            const snap = await getDocs(q);
+            snap.forEach(doc => deleteDoc(doc.ref));
+        }
+
+        let favButton = null;
+        function updateFavButton(isFav) {
+            if (favButton) {
+                if (isFav) {
+                    favButton.innerHTML = '<i class="fas fa-heart"></i> Đã yêu thích';
+                    favButton.classList.add('active');
+                } else {
+                    favButton.innerHTML = '<i class="far fa-heart"></i> Yêu thích';
+                    favButton.classList.remove('active');
+                }
+            }
+        }
+
+        async function renderProduct() {
+            const stats = await getStats(product.id);
+            const demoHtml = (product.demoImages || []).map(src => `<img src="${src}" alt="demo">`).join('');
+            const container = document.getElementById('productDetail');
+            container.innerHTML = `
+                <div class="product-header">
+                    <h1>${product.name}</h1>
+                </div>
+                <div class="demo-slider">${demoHtml || '<p>Không có ảnh demo</p>'}</div>
+                <p><strong>Mô tả:</strong> ${product.description}</p>
+                <div class="error-box">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Lỗi thường gặp:</strong><br>
+                    ${product.notes?.replace(/\n/g, '<br>') || 'Không có'}
+                </div>
+                <div class="action-buttons">
+                    <button id="downloadBtn" class="download-btn"><i class="fas fa-download"></i> Tải code (Mediafire)</button>
+                    <button id="favBtn" class="favorite-btn"><i class="far fa-heart"></i> Yêu thích</button>
+                </div>
+            `;
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.onclick = async () => {
+                await incrementDownload(product.id);
+                if (currentUser) {
+                    // Lưu lịch sử tải (nếu có)
+                    const { addDoc, collection } = await import('./js/firebase-config.js');
+                    await addDoc(collection(db, 'download_history'), { userId: currentUser.uid, productId: product.id, productName: product.name, downloadLink: product.downloadLink, downloadedAt: new Date() });
+                }
+                window.open(product.downloadLink, '_blank');
+            };
+            favButton = document.getElementById('favBtn');
+            favButton.onclick = async () => {
+                if (!currentUser) {
+                    alert('Vui lòng đăng nhập để sử dụng tính năng yêu thích.');
+                    return;
+                }
+                const isFav = await isFavorite(product.id, currentUser.uid);
+                if (isFav) {
+                    await removeFavorite(product.id, currentUser.uid);
+                    updateFavButton(false);
+                } else {
+                    await addFavorite(product.id, currentUser.uid);
+                    updateFavButton(true);
+                }
+            };
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            await loadProduct();
+        });
+    </script>
 </body>
 </html>
