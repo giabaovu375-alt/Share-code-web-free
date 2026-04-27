@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gửi code mới – CodeHub</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span></div>
+        <a href="index.html" class="back-link" style="color:var(--accent);"><i class="fas fa-arrow-left"></i> Quay lại</a>
+    </header>
+    <main class="container">
+        <div class="profile-card" style="max-width:800px; margin:0 auto;">
+            <h2><i class="fas fa-upload"></i> Gửi code mới</h2>
+            <p>Đóng góp source code của bạn cho cộng đồng. Sau khi gửi, admin sẽ kiểm duyệt và đăng lên trang chủ.</p>
+            <form id="submitCodeForm" class="profile-form">
+                <div class="form-group">
+                    <label>Tên code *</label>
+                    <input type="text" id="submitName" required placeholder="VD: Code game Flappy Bird">
+                </div>
+                <div class="form-group">
+                    <label>Danh mục *</label>
+                    <select id="submitCategory" required>
+                        <option value="web-game">🎮 Code web game</option>
+                        <option value="web-shop">🛒 Code web shop</option>
+                        <option value="web-film">🎬 Code web phim</option>
+                        <option value="other">📦 Khác</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Link ảnh bìa (URL) *</label>
+                    <input type="url" id="submitCover" required placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>Link ảnh demo (cách nhau bằng dấu phẩy)</label>
+                    <input type="text" id="submitDemoImages" placeholder="https://... , https://...">
+                </div>
+                <div class="form-group">
+                    <label>Mô tả *</label>
+                    <textarea id="submitDesc" rows="3" required placeholder="Mô tả ngắn gọn về code..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Link tải (Mediafire / Google Drive) *</label>
+                    <input type="url" id="submitDownloadLink" required>
+                </div>
+                <div class="form-group">
+                    <label>Lỗi thường gặp & hướng dẫn</label>
+                    <textarea id="submitNotes" rows="2" placeholder="Ví dụ: - Cần chạy live server..."></textarea>
+                </div>
+                <button type="submit" class="save-btn"><i class="fas fa-paper-plane"></i> Gửi duyệt</button>
+            </form>
+        </div>
+    </main>
+    <footer class="footer"><p>© 2025 CodeHub – Chia sẻ code miễn phí</p></footer>
+    <script type="module">
+        import { auth, db, onAuthStateChanged, addDoc, collection } from './js/firebase-config.js';
+
+        const form = document.getElementById('submitCodeForm');
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                alert('Bạn cần đăng nhập để gửi code!');
+                window.location.href = 'index.html';
+            }
+        });
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const user = auth.currentUser;
+            if (!user) return alert('Vui lòng đăng nhập lại.');
+
+            const name = document.getElementById('submitName').value.trim();
+            const category = document.getElementById('submitCategory').value;
+            const cover = document.getElementById('submitCover').value.trim();
+            const demoImagesRaw = document.getElementById('submitDemoImages').value;
+            const demoImages = demoImagesRaw ? demoImagesRaw.split(',').map(s => s.trim()) : [];
+            const description = document.getElementById('submitDesc').value.trim();
+            const downloadLink = document.getElementById('submitDownloadLink').value.trim();
+            const notes = document.getElementById('submitNotes').value.trim();
+
+            if (!name || !cover || !description || !downloadLink) {
+                alert('Vui lòng điền đầy đủ các trường có dấu *');
+                return;
+            }
+
+            const submitData = {
+                userId: user.uid,
+                userEmail: user.email,
+                name: name,
+                category: category,
+                cover: cover,
+                demoImages: demoImages,
+                description: description,
+                downloadLink: downloadLink,
+                notes: notes,
+                status: 'pending', // pending, approved, rejected
+                submittedAt: new Date()
+            };
+
+            try {
+                await addDoc(collection(db, 'submitted_codes'), submitData);
+                alert('Đã gửi code thành công! Admin sẽ xem xét và đăng lên trang chủ.');
+                form.reset();
+            } catch (err) {
+                alert('Lỗi: ' + err.message);
+            }
+        };
+    </script>
+</body>
+</html>
