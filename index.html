@@ -9,23 +9,43 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-
-    <!-- Header -->
     <header class="header">
-        <div class="logo">
-            <i class="fas fa-code"></i> Code<span class="highlight">Hub</span>
-        </div>
+        <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span></div>
         <div class="user-actions" id="userActions">
             <button id="showAuthBtn" class="btn-login"><i class="fas fa-user-plus"></i> Đăng nhập / Đăng ký</button>
             <div id="userInfo" class="user-info hidden">
                 <img id="userAvatar" src="https://via.placeholder.com/32" alt="avatar">
                 <span id="userName"></span>
+                <a href="history.html" id="historyLink" class="history-link"><i class="fas fa-history"></i></a>
                 <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </div>
     </header>
 
-    <!-- Modal đăng nhập/đăng ký -->
+    <div class="filter-bar">
+        <button id="menuToggle" class="menu-btn"><i class="fas fa-bars"></i> Danh mục</button>
+        <div id="categoryMenu" class="category-menu hidden">
+            <button data-cat="all" class="cat-active">Tất cả</button>
+            <button data-cat="web-game">🎮 Code web game</button>
+            <button data-cat="web-shop">🛒 Code web shop</button>
+            <button data-cat="web-film">🎬 Code web phim</button>
+            <button data-cat="other">📦 Khác</button>
+        </div>
+        <div class="stats-badge">
+            <i class="fas fa-chart-line"></i> <span id="totalStats">0 lượt xem / 0 tải</span>
+        </div>
+    </div>
+
+    <section class="hero">
+        <h1><i class="fas fa-download"></i> Tải code miễn phí</h1>
+        <p>Hàng trăm source code chất lượng, cập nhật liên tục</p>
+    </section>
+
+    <main class="container">
+        <h2 class="section-title"><i class="fas fa-fire"></i> Code nổi bật</h2>
+        <div id="productsGrid" class="products-grid"></div>
+    </main>
+
     <div id="authModal" class="modal hidden">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -45,31 +65,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Filter bar -->
-    <div class="filter-bar">
-        <button id="menuToggle" class="menu-btn"><i class="fas fa-bars"></i> Danh mục</button>
-        <div id="categoryMenu" class="category-menu hidden">
-            <button data-cat="all" class="cat-active">Tất cả</button>
-            <button data-cat="web-game">🎮 Code web game</button>
-            <button data-cat="web-shop">🛒 Code web shop</button>
-            <button data-cat="web-film">🎬 Code web phim</button>
-            <button data-cat="other">📦 Khác</button>
-        </div>
-        <div class="stats-badge">
-            <i class="fas fa-chart-line"></i> <span id="totalStats">0 lượt xem / 0 tải</span>
-        </div>
-    </div>
-
-    <section class="hero">
-        <h1><i class="fas fa-download"></i> Tải code miễn phí</h1>
-        <p>Những bộ code web hot nhất, cập nhật liên tục</p>
-    </section>
-
-    <main class="container">
-        <h2 class="section-title"><i class="fas fa-fire"></i> Code nổi bật</h2>
-        <div id="productsGrid" class="products-grid"></div>
-    </main>
 
     <footer class="footer">
         <p>© 2025 CodeHub – Chia sẻ code miễn phí. Mọi source code chỉ mang tính tham khảo.</p>
