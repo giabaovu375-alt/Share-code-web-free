@@ -1,0 +1,22 @@
+[
+    {
+        "id": "code1",
+        "name": "Code Website Xem Phim,
+        "category": "web-phim",
+        "cover": "images/phim1.jpg",
+        "demoImages": ["images/phim1_1.jpg", "images/phim1_2.jpg"],
+        "description": "CODE WEBSITE XEM PHIM VER6",
+        "downloadLink": "https://www.mediafire.com/file/xxxxx",
+        "notes": "- Lỗi: không load ảnh do path sai.\n- Cần chạy bằng live server."
+    },
+    {
+        "id": "code2",
+        "name": "Web Shop Giày Thể Thao",
+        "category": "web-shop",
+        "cover": "images/shop1.jpg",
+        "demoImages": ["images/shop1_1.jpg", "images/shop1_2.jpg", "images/shop1_3.jpg"],
+        "description": "Giao diện shop giày, giỏ hàng localStorage.",
+        "downloadLink": "https://www.mediafire.com/file/yyyyy",
+        "notes": "- Chưa thanh toán.\n- Ảnh sản phẩm tự thay."
+    }
+]
