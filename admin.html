@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin – CodeHub</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span> Admin</div>
+        <a href="index.html" class="back-link" style="color:var(--accent);"><i class="fas fa-arrow-left"></i> Về trang chủ</a>
+    </header>
+    <main class="container">
+        <h2 class="section-title"><i class="fas fa-users-cog"></i> Quản trị</h2>
+        <div class="admin-tabs">
+            <button id="tabPending" class="admin-tab active">Code chờ duyệt</button>
+            <button id="tabReports" class="admin-tab">Báo cáo lỗi</button>
+            <button id="tabStats" class="admin-tab">Thống kê</button>
+        </div>
+        <div id="adminContent" class="admin-content">
+            <p>Đang tải...</p>
+        </div>
+    </main>
+    <footer class="footer"><p>© 2025 CodeHub – Quản trị</p></footer>
+
+    <style>
+        .admin-tabs { display: flex; gap: 16px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+        .admin-tab { background: none; border: none; padding: 10px 20px; cursor: pointer; font-weight: 600; color: var(--text-secondary); }
+        .admin-tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .admin-card { background: var(--bg-card); border-radius: 16px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .admin-card h3 { margin-bottom: 12px; }
+        .admin-actions { margin-top: 16px; display: flex; gap: 12px; }
+        .btn-approve { background: #22c55e; color: #000; border: none; padding: 8px 18px; border-radius: 40px; cursor: pointer; }
+        .btn-reject { background: #ef4444; color: white; border: none; padding: 8px 18px; border-radius: 40px; cursor: pointer; }
+        .btn-delete { background: #444; color: white; border: none; padding: 8px 18px; border-radius: 40px; cursor: pointer; }
+    </style>
+
+    <script type="module">
+        import { auth, db, onAuthStateChanged, collection, query, where, getDocs, doc, deleteDoc, updateDoc, addDoc, getDoc, orderBy } from './js/firebase-config.js';
+
+        // ADMIN_EMAIL – thay bằng email của cậu (tài khoản admin)
+        const ADMIN_EMAIL = 'admin@codehub.com'; // CẬU ĐỔI LẠI THÀNH EMAIL CỦA MÌNH
+
+        let currentTab = 'pending';
+
+        const tabPending = document.getElementById('tabPending');
+        const tabReports = document.getElementById('tabReports');
+        const tabStats = document.getElementById('tabStats');
+        const adminContent = document.getElementById('adminContent');
+
+        async function loadPendingCodes() {
+            const q = query(collection(db, 'submitted_codes'), where('status', '==', 'pending'), orderBy('submittedAt', 'desc'));
+            const snap = await getDocs(q);
+            if (snap.empty) {
+                adminContent.innerHTML = '<div class="admin-card">Hiện không có code nào chờ duyệt.</div>';
+                return;
+            }
+            let html = '';
+            for (const docSnap of snap.docs) {
+                const data = docSnap.data();
+                const date = data.submittedAt?.toDate().toLocaleString() || 'N/A';
+                html += `
+                    <div class="admin-card" data-id="${docSnap.id}">
+                        <h3>${escapeHtml(data.name)}</h3>
+                        <p><strong>Người gửi:</strong> ${escapeHtml(data.userEmail)}</p>
+                        <p><strong>Danh mục:</strong> ${data.category}</p>
+                        <p><strong>Mô tả:</strong> ${data.description.substring(0, 100)}...</p>
+                        <p><strong>Link tải:</strong> <a href="${data.downloadLink}" target="_blank">${data.downloadLink}</a></p>
+                        <p><strong>Ngày gửi:</strong> ${date}</p>
+                        <div class="admin-actions">
+                            <button class="btn-approve" data-id="${docSnap.id}"><i class="fas fa-check"></i> Duyệt</button>
+                            <button class="btn-reject" data-id="${docSnap.id}"><i class="fas fa-times"></i> Từ chối</button>
+                            <button class="btn-delete" data-id="${docSnap.id}"><i class="fas fa-trash"></i> Xóa</button>
+                        </div>
+                    </div>
+                `;
+            }
+            adminContent.innerHTML = html;
+            // Gắn sự kiện
+            document.querySelectorAll('.btn-approve').forEach(btn => {
+                btn.onclick = () => approveCode(btn.dataset.id);
+            });
+            document.querySelectorAll('.btn-reject').forEach(btn => {
+                btn.onclick = () => rejectCode(btn.dataset.id);
+            });
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.onclick = () => deleteCode(btn.dataset.id);
+            });
+        }
+
+        async function approveCode(id) {
+            if (!confirm('Duyệt code này và đưa lên thư viện?')) return;
+            const docRef = doc(db, 'submitted_codes', id);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) return;
+            const data = docSnap.data();
+            // Thêm vào products.json? Không, vì JSON tĩnh. Để đơn giản, tôi sẽ không thêm vào JSON. Admin có thể copy data và tự thêm thủ công vào products.json.
+            // Nhưng để tạm: chỉ chuyển status thành 'approved' và lưu lại.
+            await updateDoc(docRef, { status: 'approved', approvedAt: new Date() });
+            alert('Đã duyệt code. Lưu ý: bạn cần thêm code này vào data/products.json để hiển thị trên trang chủ.');
+            loadPendingCodes();
+        }
+
+        async function rejectCode(id) {
+            if (confirm('Từ chối code này?')) {
+                await updateDoc(doc(db, 'submitted_codes', id), { status: 'rejected' });
+                loadPendingCodes();
+            }
+        }
+        async function deleteCode(id) {
+            if (confirm('Xóa code này vĩnh viễn?')) {
+                await deleteDoc(doc(db, 'submitted_codes', id));
+                loadPendingCodes();
+            }
+        }
+
+        async function loadReports() {
+            // Giả sử có collection 'reports' do người dùng gửi báo cáo lỗi (chưa có form, tạm thời)
+            // Tôi sẽ không implement chi tiết ở đây, hiển thị thông báo.
+            adminContent.innerHTML = '<div class="admin-card">Tính năng báo cáo lỗi sẽ được cập nhật sau. Bạn có thể xem trực tiếp trong Firestore collection "reports".</div>';
+        }
+
+        async function loadAdminStats() {
+            const codesSnap = await getDocs(collection(db, 'submitted_codes'));
+            const usersSnap = await getDocs(collection(db, 'users'));
+            const favoritesSnap = await getDocs(collection(db, 'favorites'));
+            const downloadsSnap = await getDocs(collection(db, 'download_history'));
+            adminContent.innerHTML = `
+                <div class="admin-card">
+                    <h3>Tổng quan</h3>
+                    <p>📦 Code đã gửi: ${codesSnap.size}</p>
+                    <p>👥 Người dùng đăng ký: ${usersSnap.size}</p>
+                    <p>❤️ Lượt yêu thích: ${favoritesSnap.size}</p>
+                    <p>⬇️ Lượt tải (có lịch sử): ${downloadsSnap.size}</p>
+                </div>
+            `;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Kiểm tra admin
+        onAuthStateChanged(auth, (user) => {
+            if (!user || user.email !== ADMIN_EMAIL) {
+                adminContent.innerHTML = '<div class="admin-card">Bạn không có quyền truy cập trang này. <a href="index.html">Quay lại trang chủ</a>.</div>';
+                return;
+            }
+            // Cho phép load tab mặc định
+            loadPendingCodes();
+        });
+
+        tabPending.onclick = () => {
+            currentTab = 'pending';
+            tabPending.classList.add('active');
+            tabReports.classList.remove('active');
+            tabStats.classList.remove('active');
+            loadPendingCodes();
+        };
+        tabReports.onclick = () => {
+            currentTab = 'reports';
+            tabPending.classList.remove('active');
+            tabReports.classList.add('active');
+            tabStats.classList.remove('active');
+            loadReports();
+        };
+        tabStats.onclick = () => {
+            currentTab = 'stats';
+            tabPending.classList.remove('active');
+            tabReports.classList.remove('active');
+            tabStats.classList.add('active');
+            loadAdminStats();
+        };
+    </script>
+</body>
+</html>
