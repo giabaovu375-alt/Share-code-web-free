@@ -5,13 +5,26 @@ import {
     signOut,
     onAuthStateChanged,
     doc, setDoc, getDoc, updateDoc, increment,
-    collection, query, getDocs, addDoc, orderBy, where
+    collection, query, getDocs, addDoc, where, deleteDoc
 } from './firebase-config.js';
 
-// -------------------- XÁC ĐỊNH TRANG HIỆN TẠI --------------------
+// -------------------- XÁC ĐỊNH TRANG --------------------
 const path = window.location.pathname;
-const isProductPage = path.includes('product.html');
-const isHistoryPage = path.includes('history.html');
+const isIndexPage = path === '/' || path.endsWith('index.html') || path === '';
+
+// -------------------- DOM ELEMENTS (chỉ khi ở index) --------------------
+let productsGrid = null;
+let totalStatsSpan = null;
+let menuToggle = null;
+let categoryMenu = null;
+let currentCategory = 'all';
+
+if (isIndexPage) {
+    productsGrid = document.getElementById('productsGrid');
+    totalStatsSpan = document.getElementById('totalStats');
+    menuToggle = document.getElementById('menuToggle');
+    categoryMenu = document.getElementById('categoryMenu');
+}
 
 // -------------------- DỮ LIỆU SẢN PHẨM --------------------
 let productsData = [];
@@ -19,9 +32,9 @@ let productsData = [];
 async function loadProductsJSON() {
     try {
         const res = await fetch('data/products.json');
-        if (!res.ok) throw new Error('Không thể tải products.json');
+        if (!res.ok) throw new Error('Không tải được products.json');
         productsData = await res.json();
-        if (!isProductPage && !isHistoryPage && document.getElementById('productsGrid')) {
+        if (isIndexPage && productsGrid) {
             renderProducts(productsData);
         }
         return productsData;
@@ -31,16 +44,14 @@ async function loadProductsJSON() {
     }
 }
 
-// -------------------- RENDER TRANG CHỦ --------------------
-let currentCategory = 'all';
+// -------------------- HIỂN THỊ SẢN PHẨM (INDEX) --------------------
 async function renderProducts(products) {
-    const grid = document.getElementById('productsGrid');
-    if (!grid) return;
+    if (!productsGrid) return;
     let filtered = products;
     if (currentCategory !== 'all') {
         filtered = products.filter(p => p.category === currentCategory);
     }
-    grid.innerHTML = '';
+    productsGrid.innerHTML = '';
     for (let product of filtered) {
         const stats = await getStats(product.id);
         const card = document.createElement('div');
@@ -53,17 +64,17 @@ async function renderProducts(products) {
                 </div>
             </div>
             <div class="card-info">
-                <h3>${product.name}</h3>
-                <p>${product.description.substring(0, 60)}...</p>
+                <h3>${escapeHtml(product.name)}</h3>
+                <p>${escapeHtml(product.description.substring(0, 60))}...</p>
                 <div class="badge">${product.category}</div>
             </div>
         `;
         card.onclick = () => { window.location.href = `product.html?id=${product.id}`; };
-        grid.appendChild(card);
+        productsGrid.appendChild(card);
     }
 }
 
-// -------------------- STATS --------------------
+// -------------------- THỐNG KÊ --------------------
 async function getStats(productId) {
     try {
         const statRef = doc(db, 'stats', productId);
@@ -72,102 +83,17 @@ async function getStats(productId) {
     } catch (e) { return { views: 0, downloads: 0 }; }
 }
 
-async function incrementView(productId) {
-    const statRef = doc(db, 'stats', productId);
-    await updateDoc(statRef, { views: increment(1) }).catch(async () => {
-        await setDoc(statRef, { views: 1, downloads: 0 });
+async function loadTotalStats() {
+    if (!totalStatsSpan) return;
+    const q = query(collection(db, 'stats'));
+    const snapshot = await getDocs(q);
+    let totalViews = 0, totalDownloads = 0;
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        totalViews += data.views || 0;
+        totalDownloads += data.downloads || 0;
     });
-}
-
-async function incrementDownload(productId) {
-    const statRef = doc(db, 'stats', productId);
-    await updateDoc(statRef, { downloads: increment(1) }).catch(async () => {
-        await setDoc(statRef, { views: 0, downloads: 1 });
-    });
-}
-
-// -------------------- LƯU LỊCH SỬ TẢI --------------------
-async function saveDownloadHistory(userId, product) {
-    if (!userId) return;
-    await addDoc(collection(db, 'download_history'), {
-        userId: userId,
-        productId: product.id,
-        productName: product.name,
-        downloadLink: product.downloadLink,
-        downloadedAt: new Date()
-    });
-}
-
-// -------------------- TRANG CHI TIẾT SẢN PHẨM --------------------
-if (isProductPage) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const productId = urlParams.get('id');
-    (async () => {
-        const products = await loadProductsJSON();
-        const product = products.find(p => p.id === productId);
-        if (!product) {
-            document.getElementById('productDetail').innerHTML = '<p class="error">Không tìm thấy sản phẩm</p>';
-            return;
-        }
-        // Tăng lượt xem (nếu đã đăng nhập vẫn tăng, nhưng cần lấy user)
-        await incrementView(product.id);
-
-        const demoHtml = product.demoImages.map(src => `<img src="${src}" alt="demo">`).join('');
-        document.getElementById('productDetail').innerHTML = `
-            <div class="product-header"><h1>${product.name}</h1></div>
-            <div class="demo-slider">${demoHtml}</div>
-            <p><strong>Mô tả:</strong> ${product.description}</p>
-            <div class="error-box"><i class="fas fa-exclamation-triangle"></i> <strong>Lỗi thường gặp:</strong><br>${product.notes.replace(/\n/g, '<br>')}</div>
-            <button id="downloadBtn" class="download-btn"><i class="fas fa-download"></i> Tải code ngay (Mediafire)</button>
-        `;
-
-        const downloadBtn = document.getElementById('downloadBtn');
-        downloadBtn.onclick = async () => {
-            await incrementDownload(product.id);
-            if (auth.currentUser) {
-                await saveDownloadHistory(auth.currentUser.uid, product);
-                alert("Đã lưu vào lịch sử tải của bạn.");
-            } else {
-                alert("Bạn chưa đăng nhập, lịch sử tải sẽ không được lưu. Bạn vẫn có thể tải file.");
-            }
-            window.open(product.downloadLink, '_blank');
-        };
-    })();
-}
-
-// -------------------- TRANG LỊCH SỬ TẢI --------------------
-if (isHistoryPage) {
-    const historyContainer = document.getElementById('historyList');
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            historyContainer.innerHTML = '<p>Vui lòng <a href="index.html">đăng nhập</a> để xem lịch sử tải.</p>';
-            return;
-        }
-        const q = query(collection(db, 'download_history'), where('userId', '==', user.uid), orderBy('downloadedAt', 'desc'));
-        const snap = await getDocs(q);
-        if (snap.empty) {
-            historyContainer.innerHTML = '<p>Bạn chưa tải code nào.</p>';
-            return;
-        }
-        historyContainer.innerHTML = '';
-        snap.forEach(doc => {
-            const data = doc.data();
-            const date = data.downloadedAt?.toDate().toLocaleString() || 'N/A';
-            const div = document.createElement('div');
-            div.className = 'history-item';
-            div.innerHTML = `
-                <div class="history-info">
-                    <h4>${data.productName}</h4>
-                    <p><i class="far fa-clock"></i> ${date}</p>
-                </div>
-                <button class="redownload-btn" data-link="${data.downloadLink}">Tải lại</button>
-            `;
-            historyContainer.appendChild(div);
-        });
-        document.querySelectorAll('.redownload-btn').forEach(btn => {
-            btn.onclick = () => window.open(btn.dataset.link, '_blank');
-        });
-    });
+    totalStatsSpan.innerText = `${totalViews} lượt xem / ${totalDownloads} tải`;
 }
 
 // -------------------- AUTH MODAL & APP --------------------
@@ -199,7 +125,8 @@ if (doRegisterBtn) {
         const pwd = document.getElementById('regPass').value;
         if (!email || !pwd) return alert('Nhập email và mật khẩu');
         try {
-            await createUserWithEmailAndPassword(auth, email, pwd);
+            const userCred = await createUserWithEmailAndPassword(auth, email, pwd);
+            await setDoc(doc(db, 'users', userCred.user.uid), { email, createdAt: new Date() });
             alert('Đăng ký thành công! Vui lòng đăng nhập.');
             closeModalFunc();
             loginForm.classList.remove('hidden');
@@ -238,16 +165,16 @@ function updateUserUI(user) {
 
 onAuthStateChanged(auth, (user) => {
     updateUserUI(user);
-    if (!isProductPage && !isHistoryPage) {
-        loadProductsJSON();
+    if (isIndexPage) {
+        loadTotalStats();
+        if (productsData.length === 0) loadProductsJSON();
+        else renderProducts(productsData);
     }
 });
 
-// -------------------- CATEGORY MENU (chỉ ở index) --------------------
-if (!isProductPage && !isHistoryPage) {
-    const menuToggle = document.getElementById('menuToggle');
-    const categoryMenu = document.getElementById('categoryMenu');
-    if (menuToggle) menuToggle.onclick = () => categoryMenu.classList.toggle('hidden');
+// -------------------- CATEGORY MENU (chỉ index) --------------------
+if (isIndexPage && menuToggle) {
+    menuToggle.onclick = () => categoryMenu.classList.toggle('hidden');
     document.querySelectorAll('.category-menu button').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.category-menu button').forEach(b => b.classList.remove('cat-active'));
@@ -256,5 +183,62 @@ if (!isProductPage && !isHistoryPage) {
             renderProducts(productsData);
             categoryMenu.classList.add('hidden');
         });
+    });
+}
+
+// -------------------- KHỞI TẠO --------------------
+if (isIndexPage) {
+    loadProductsJSON();
+    loadTotalStats();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+// Export các hàm cần thiết cho các trang khác (nếu dùng chung app.js)
+export { getStats, incrementView, incrementDownload, isFavorite, addFavorite, removeFavorite, saveDownloadHistory };
+
+// Các hàm bổ sung cho product.html, favorites.html
+async function incrementView(productId) {
+    const statRef = doc(db, 'stats', productId);
+    await updateDoc(statRef, { views: increment(1) }).catch(async () => {
+        await setDoc(statRef, { views: 1, downloads: 0 });
+    });
+}
+async function incrementDownload(productId) {
+    const statRef = doc(db, 'stats', productId);
+    await updateDoc(statRef, { downloads: increment(1) }).catch(async () => {
+        await setDoc(statRef, { views: 0, downloads: 1 });
+    });
+}
+async function isFavorite(productId, userId) {
+    if (!userId) return false;
+    const q = query(collection(db, 'favorites'), where('userId', '==', userId), where('productId', '==', productId));
+    const snap = await getDocs(q);
+    return !snap.empty;
+}
+async function addFavorite(productId, userId) {
+    await addDoc(collection(db, 'favorites'), { userId, productId, favoritedAt: new Date() });
+}
+async function removeFavorite(productId, userId) {
+    const q = query(collection(db, 'favorites'), where('userId', '==', userId), where('productId', '==', productId));
+    const snap = await getDocs(q);
+    snap.forEach(doc => deleteDoc(doc.ref));
+}
+async function saveDownloadHistory(userId, product) {
+    if (!userId) return;
+    await addDoc(collection(db, 'download_history'), {
+        userId: userId,
+        productId: product.id,
+        productName: product.name,
+        downloadLink: product.downloadLink,
+        downloadedAt: new Date()
     });
 }
