@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code yêu thích – CodeHub</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span></div>
+        <a href="index.html" class="back-link" style="color:var(--accent);"><i class="fas fa-arrow-left"></i> Quay lại</a>
+    </header>
+    <main class="container">
+        <h2 class="section-title"><i class="fas fa-heart"></i> Code yêu thích</h2>
+        <div id="favoritesGrid" class="products-grid"></div>
+    </main>
+    <footer class="footer"><p>© 2025 CodeHub – Chia sẻ code miễn phí</p></footer>
+    <script type="module">
+        import { auth, db, onAuthStateChanged, collection, query, where, getDocs, doc, getDoc } from './js/firebase-config.js';
+
+        const favoritesGrid = document.getElementById('favoritesGrid');
+        let productsMap = new Map(); // lưu thông tin sản phẩm từ products.json
+
+        async function loadProductsJSON() {
+            const res = await fetch('data/products.json');
+            const products = await res.json();
+            products.forEach(p => productsMap.set(p.id, p));
+        }
+
+        async function loadFavorites(userId) {
+            const q = query(collection(db, 'favorites'), where('userId', '==', userId));
+            const snapshot = await getDocs(q);
+            const favoriteIds = snapshot.docs.map(doc => doc.data().productId);
+            // Hiển thị sản phẩm
+            favoritesGrid.innerHTML = '';
+            if (favoriteIds.length === 0) {
+                favoritesGrid.innerHTML = '<p style="text-align:center;">Bạn chưa yêu thích code nào.</p>';
+                return;
+            }
+            for (let id of favoriteIds) {
+                const product = productsMap.get(id);
+                if (!product) continue;
+                const statsSnap = await getDoc(doc(db, 'stats', id));
+                const stats = statsSnap.exists() ? statsSnap.data() : { views: 0, downloads: 0 };
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div class="card-img" style="background-image: url('${product.cover}');">
+                        <div class="card-stats">
+                            <span><i class="fas fa-eye"></i> ${stats.views}</span>
+                            <span><i class="fas fa-download"></i> ${stats.downloads}</span>
+                        </div>
+                    </div>
+                    <div class="card-info">
+                        <h3>${product.name}</h3>
+                        <p>${product.description.substring(0, 60)}...</p>
+                        <div class="badge">${product.category}</div>
+                    </div>
+                `;
+                card.onclick = () => window.location.href = `product.html?id=${product.id}`;
+                favoritesGrid.appendChild(card);
+            }
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                favoritesGrid.innerHTML = '<p style="text-align:center;">Vui lòng <a href="index.html">đăng nhập</a> để xem danh sách yêu thích.</p>';
+                return;
+            }
+            await loadProductsJSON();
+            await loadFavorites(user.uid);
+        });
+    </script>
+</body>
+</html>
