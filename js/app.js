@@ -1,47 +1,10 @@
 import { 
     auth, db, 
     createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged,
-    doc, setDoc, getDoc, updateDoc, increment, collection, query, getDocs, orderBy
+    doc, setDoc, getDoc, updateDoc, increment, collection, query, getDocs
 } from './firebase-config.js';
 
-// -------------------- DỮ LIỆU SẢN PHẨM MẪU --------------------
-const productsData = [
-    {
-        id: "code1",
-        name: "Code Game Bắn Súng HTML5",
-        category: "web-game",
-        cover: "images/game1.jpg",
-        demoImages: ["images/game1_1.jpg", "images/game1_2.jpg"],
-        description: "Game bắn súng góc nhìn thứ nhất, sử dụng HTML/CSS/JS thuần, responsive.",
-        downloadLink: "https://www.mediafire.com/file/xxxxx",
-        notes: "- Lỗi thường gặp: không load được ảnh do path sai. - Cần mở bằng live server."
-    },
-    {
-        id: "code2",
-        name: "Web Shop Giày Thể Thao",
-        category: "web-shop",
-        cover: "images/shop1.jpg",
-        demoImages: ["images/shop1_1.jpg", "images/shop1_2.jpg", "images/shop1_3.jpg"],
-        description: "Giao diện shop giày đẹp mắt, có giỏ hàng bằng localStorage.",
-        downloadLink: "https://www.mediafire.com/file/yyyyy",
-        notes: "- Chưa tích hợp thanh toán trực tuyến. - Hình ảnh cần tự thay."
-    },
-    {
-        id: "code3",
-        name: "Web Xem Phim (embed)",
-        category: "web-film",
-        cover: "images/film1.jpg",
-        demoImages: ["images/film1_1.jpg"],
-        description: "Web xem phim với thanh tìm kiếm, embed từ nhiều nguồn.",
-        downloadLink: "https://www.mediafire.com/file/zzzzz",
-        notes: "- Nguồn phim có thể bị chặn. - Cần cập nhật link embed thường xuyên."
-    }
-];
-
-let currentUser = null;
-let currentCategory = "all";
-
-// DOM elements
+// -------------------- DOM ELEMENTS --------------------
 const productsGrid = document.getElementById("productsGrid");
 const showAuthBtn = document.getElementById("showAuthBtn");
 const logoutBtn = document.getElementById("logoutBtn");
@@ -61,54 +24,78 @@ const switchToLogin = document.getElementById("switchToLogin");
 const doLoginBtn = document.getElementById("doLoginBtn");
 const doRegisterBtn = document.getElementById("doRegisterBtn");
 
+// -------------------- STATE --------------------
+let currentUser = null;
+let currentCategory = "all";
+let productsData = [];   // sẽ được load từ file JSON
+
+// -------------------- FETCH DỮ LIỆU TỪ JSON --------------------
+async function loadProducts() {
+    try {
+        const response = await fetch('data/products.json');
+        if (!response.ok) throw new Error('Không tải được products.json');
+        productsData = await response.json();
+        renderProducts();
+    } catch (error) {
+        console.error("Lỗi load sản phẩm:", error);
+        if (productsGrid) productsGrid.innerHTML = '<p style="color:red; text-align:center;">Không thể tải danh sách code. Vui lòng thử lại sau.</p>';
+    }
+}
+
 // -------------------- MODAL HANDLERS --------------------
-function openModal() { modal.classList.remove("hidden"); }
-function closeModalFunc() { modal.classList.add("hidden"); }
-switchToRegister.onclick = (e) => { e.preventDefault(); loginForm.classList.add("hidden"); registerForm.classList.remove("hidden"); };
-switchToLogin.onclick = (e) => { e.preventDefault(); registerForm.classList.add("hidden"); loginForm.classList.remove("hidden"); };
-closeModal.onclick = closeModalFunc;
+function openModal() { if (modal) modal.classList.remove("hidden"); }
+function closeModalFunc() { if (modal) modal.classList.add("hidden"); }
+if (switchToRegister) switchToRegister.onclick = (e) => { e.preventDefault(); loginForm.classList.add("hidden"); registerForm.classList.remove("hidden"); };
+if (switchToLogin) switchToLogin.onclick = (e) => { e.preventDefault(); registerForm.classList.add("hidden"); loginForm.classList.remove("hidden"); };
+if (closeModal) closeModal.onclick = closeModalFunc;
 if (showAuthBtn) showAuthBtn.onclick = openModal;
 
 // -------------------- ĐĂNG KÝ --------------------
-doRegisterBtn.onclick = async () => {
-    const email = document.getElementById("regEmail").value;
-    const password = document.getElementById("regPass").value;
-    if (!email || !password) return alert("Nhập đầy đủ email và mật khẩu");
-    try {
-        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, "users", userCred.user.uid), { email, createdAt: new Date() });
-        alert("Đăng ký thành công! Vui lòng đăng nhập.");
-        closeModalFunc();
-        loginForm.classList.remove("hidden");
-        registerForm.classList.add("hidden");
-    } catch (err) {
-        alert("Lỗi: " + err.message);
-    }
-};
+if (doRegisterBtn) {
+    doRegisterBtn.onclick = async () => {
+        const email = document.getElementById("regEmail").value;
+        const password = document.getElementById("regPass").value;
+        if (!email || !password) return alert("Nhập đầy đủ email và mật khẩu");
+        try {
+            const userCred = await createUserWithEmailAndPassword(auth, email, password);
+            await setDoc(doc(db, "users", userCred.user.uid), { email, createdAt: new Date() });
+            alert("Đăng ký thành công! Vui lòng đăng nhập.");
+            closeModalFunc();
+            loginForm.classList.remove("hidden");
+            registerForm.classList.add("hidden");
+        } catch (err) {
+            alert("Lỗi: " + err.message);
+        }
+    };
+}
 
 // -------------------- ĐĂNG NHẬP --------------------
-doLoginBtn.onclick = async () => {
-    const email = document.getElementById("loginEmail").value;
-    const password = document.getElementById("loginPass").value;
-    if (!email || !password) return alert("Nhập email và mật khẩu");
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-        closeModalFunc();
-    } catch (err) {
-        alert("Sai email hoặc mật khẩu");
-    }
-};
+if (doLoginBtn) {
+    doLoginBtn.onclick = async () => {
+        const email = document.getElementById("loginEmail").value;
+        const password = document.getElementById("loginPass").value;
+        if (!email || !password) return alert("Nhập email và mật khẩu");
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            closeModalFunc();
+        } catch (err) {
+            alert("Sai email hoặc mật khẩu");
+        }
+    };
+}
 
 // -------------------- ĐĂNG XUẤT --------------------
 if (logoutBtn) logoutBtn.onclick = async () => { await signOut(auth); };
 
 // -------------------- THỐNG KÊ --------------------
-async function updateStats(productId, type) { /* đã có trong product.html, không cần ở đây */ }
 async function getStats(productId) {
-    const statSnap = await getDoc(doc(db, "stats", productId));
+    const statRef = doc(db, "stats", productId);
+    const statSnap = await getDoc(statRef);
     return statSnap.exists() ? statSnap.data() : { views: 0, downloads: 0 };
 }
+
 async function loadTotalStats() {
+    if (!totalStatsSpan) return;
     const q = query(collection(db, "stats"));
     const snapshot = await getDocs(q);
     let totalViews = 0, totalDownloads = 0;
@@ -117,7 +104,7 @@ async function loadTotalStats() {
         totalViews += data.views || 0;
         totalDownloads += data.downloads || 0;
     });
-    if (totalStatsSpan) totalStatsSpan.innerText = `${totalViews} lượt xem / ${totalDownloads} tải`;
+    totalStatsSpan.innerText = `${totalViews} lượt xem / ${totalDownloads} tải`;
 }
 
 // -------------------- RENDER SẢN PHẨM --------------------
@@ -125,7 +112,10 @@ async function renderProducts() {
     if (!productsGrid) return;
     productsGrid.innerHTML = '';
     let filtered = productsData;
-    if (currentCategory !== 'all') filtered = productsData.filter(p => p.category === currentCategory);
+    if (currentCategory !== 'all') {
+        filtered = productsData.filter(p => p.category === currentCategory);
+    }
+    
     for (let product of filtered) {
         const stats = await getStats(product.id);
         const card = document.createElement('div');
@@ -164,12 +154,15 @@ function updateUserUI(user) {
         currentUser = null;
     }
     loadTotalStats();
-    renderProducts();
+    // Không gọi renderProducts() ở đây vì loadProducts() đã gọi sau auth
 }
 
 // -------------------- AUTH STATE --------------------
 onAuthStateChanged(auth, (user) => {
     updateUserUI(user);
+    // Sau khi auth xong, load lại sản phẩm (đảm bảo data đã được fetch)
+    if (!productsData.length) loadProducts();
+    else renderProducts();
 });
 
 // -------------------- CATEGORY MENU --------------------
@@ -186,8 +179,8 @@ if (menuToggle) {
     });
 }
 
-// -------------------- KHỞI TẠO --------------------
+// -------------------- INIT --------------------
 (async function init() {
-    await loadTotalStats();
-    renderProducts();
+    await loadProducts();      // lấy dữ liệu sản phẩm
+    await loadTotalStats();    // lấy thống kê (nếu có firebase)
 })();
