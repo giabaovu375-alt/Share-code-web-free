@@ -6,7 +6,7 @@
         "cover": "images/phim1.jpg",
         "demoImages": ["images/phim1_1.jpg", "images/phim1_2.jpg"],
         "description": "CODE WEBSITE XEM PHIM VER6",
-        "downloadLink": "https://www.mediafire.com/file/xxxxx",
+        "downloadLink": "https://www.mediafire.com/file/4fcqnjsqjqemgp1/phim6v.com.zip/file",
         "notes": "- Lỗi: không load ảnh do path sai.\n- Cần chạy bằng live server."
     },
     {
