@@ -44,37 +44,53 @@ async function loadProductsJSON() {
     }
 }
 
-// -------------------- HIỂN THỊ SẢN PHẨM (INDEX) --------------------
+// -------------------- HIỂN THỊ SẢN PHẨM (ĐÃ NÂNG CẤP) --------------------
 async function renderProducts(products) {
     if (!productsGrid) return;
+    
     let filtered = products;
     if (currentCategory !== 'all') {
         filtered = products.filter(p => p.category === currentCategory);
     }
+
+    // Xóa sạch grid
     productsGrid.innerHTML = '';
-    for (let product of filtered) {
+
+    if (filtered.length === 0) {
+        productsGrid.innerHTML = `<div class="empty-state">Chưa có sản phẩm nào.</div>`;
+        return;
+    }
+
+    // Tạo HTML string cho toàn bộ grid (nhanh hơn tạo DOM rời)
+    let html = '';
+    for (const product of filtered) {
+        // Lấy stats từ Firebase (vẫn giữ nguyên)
         const stats = await getStats(product.id);
-        const card = document.createElement('div');
-        card.className = 'product-card';
-        card.innerHTML = `
-            <div class="card-img" style="background-image: url('${product.cover}');">
-                <div class="card-stats">
-                    <span><i class="fas fa-eye"></i> ${stats.views}</span>
-                    <span><i class="fas fa-download"></i> ${stats.downloads}</span>
+        const cover = product.cover || (product.demoImages && product.demoImages[0]) || 'https://via.placeholder.com/300x180/16213e/ffffff?text=No+Image';
+        
+        html += `
+            <div class="product-card" onclick="window.location.href='product.html?id=${encodeURIComponent(product.id)}'">
+                <div class="card-img-wrapper">
+                    <img src="${escapeHtml(cover)}" alt="${escapeHtml(product.name)}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x180/16213e/ffffff?text=Error'">
+                    <div class="card-stats">
+                        <span><i class="fas fa-eye"></i> ${stats.views || 0}</span>
+                        <span><i class="fas fa-download"></i> ${stats.downloads || 0}</span>
+                    </div>
+                </div>
+                <div class="card-info">
+                    <h3>${escapeHtml(product.name)}</h3>
+                    <p>${escapeHtml((product.description || '').substring(0, 60))}...</p>
+                    <div class="badge">${escapeHtml(product.category || 'khác')}</div>
                 </div>
             </div>
-            <div class="card-info">
-                <h3>${escapeHtml(product.name)}</h3>
-                <p>${escapeHtml(product.description.substring(0, 60))}...</p>
-                <div class="badge">${product.category}</div>
-            </div>
         `;
-        card.onclick = () => { window.location.href = `product.html?id=${product.id}`; };
-        productsGrid.appendChild(card);
     }
+    
+    // Gán một lần duy nhất
+    productsGrid.innerHTML = html;
 }
 
-// -------------------- THỐNG KÊ --------------------
+// -------------------- THỐNG KÊ (GIỮ NGUYÊN) --------------------
 async function getStats(productId) {
     try {
         const statRef = doc(db, 'stats', productId);
@@ -96,7 +112,7 @@ async function loadTotalStats() {
     totalStatsSpan.innerText = `${totalViews} lượt xem / ${totalDownloads} tải`;
 }
 
-// -------------------- AUTH MODAL & APP --------------------
+// -------------------- AUTH MODAL & APP (GIỮ NGUYÊN) --------------------
 let currentUser = null;
 const showAuthBtn = document.getElementById('showAuthBtn');
 const logoutBtn = document.getElementById('logoutBtn');
@@ -172,7 +188,7 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// -------------------- CATEGORY MENU (chỉ index) --------------------
+// -------------------- CATEGORY MENU (GIỮ NGUYÊN) --------------------
 if (isIndexPage && menuToggle) {
     menuToggle.onclick = () => categoryMenu.classList.toggle('hidden');
     document.querySelectorAll('.category-menu button').forEach(btn => {
@@ -202,10 +218,10 @@ function escapeHtml(str) {
     });
 }
 
-// Export các hàm cần thiết cho các trang khác (nếu dùng chung app.js)
+// Export các hàm cần thiết cho các trang khác (giữ nguyên)
 export { getStats, incrementView, incrementDownload, isFavorite, addFavorite, removeFavorite, saveDownloadHistory };
 
-// Các hàm bổ sung cho product.html, favorites.html
+// Các hàm bổ sung cho product.html, favorites.html (giữ nguyên)
 async function incrementView(productId) {
     const statRef = doc(db, 'stats', productId);
     await updateDoc(statRef, { views: increment(1) }).catch(async () => {
@@ -241,4 +257,4 @@ async function saveDownloadHistory(userId, product) {
         downloadLink: product.downloadLink,
         downloadedAt: new Date()
     });
-}
+        }
