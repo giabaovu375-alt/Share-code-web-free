@@ -2,38 +2,42 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>CodeHub Premium • Chi tiết code</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/product.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết sản phẩm - CodeHub</title>
     <base href="/Share-code-web-free/">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/pages.css">
 </head>
 <body>
-    <div id="preloader"><div class="loader-spinner"></div></div>
-
-    <header class="header">
-        <div class="logo"><i class="fas fa-code"></i> Code<span style="color:#c4b5fd;">Hub</span></div>
-        <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Quay lại</a>
-    </header>
-
-    <main class="container">
-        <div id="productContent">
-            <div style="text-align:center;padding:60px;color:#8b8b9e;">
-                <i class="fas fa-spinner fa-pulse fa-2x"></i><br>Đang tải dữ liệu...
-            </div>
-        </div>
-    </main>
-
-    <div id="lightbox" class="lightbox">
-        <span class="lightbox-close">&times;</span>
-        <img src="" alt="preview" id="lightboxImg">
+    <div id="app-loading" class="app-loader">
+        <div class="spinner"></div>
+        <p>Đang tải sản phẩm...</p>
     </div>
 
-    <footer class="footer"><p>© 2025 CodeHub Premium</p></footer>
-    <div id="toast" class="toast"></div>
+    <div id="app" style="display:none;">
+        <header class="header">
+            <div class="header-left">
+                <a href="index.html" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Quay lại
+                </a>
+            </div>
+            <div class="header-right" id="authContainer"></div>
+        </header>
+
+        <main class="container" id="productContent"></main>
+
+        <footer class="footer">
+            <p>© 2025 CodeHub</p>
+        </footer>
+    </div>
+
+    <div id="lightbox-root"></div>
+    <div id="toast-root"></div>
 
     <script type="module" src="js/firebase-config.js"></script>
-    <script type="module" src="js/product-detail.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
