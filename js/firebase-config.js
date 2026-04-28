@@ -1,4 +1,4 @@
-// ========== FIREBASE CONFIG (ỔN ĐỊNH - STATIC IMPORT) ==========
+// ========== FIREBASE CONFIG (ĐÃ SỬA LỖI EXPORT) ==========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -15,13 +15,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+console.log("✅ Firebase đã sẵn sàng!");
 
-console.log("✅ Firebase sẵn sàng");
-
-export {
-    auth, db,
-    createUserWithEmailAndPassword, signInWithEmailAndPassword,
-    signOut, onAuthStateChanged, updateProfile,
-    doc, setDoc, getDoc, updateDoc, increment,
-    collection, addDoc, deleteDoc
-};
+// Xuất trực tiếp, không dùng destructuring của object rỗng
+export { auth, db };
+export { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile };
+export { doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, deleteDoc };
