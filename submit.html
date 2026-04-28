@@ -11,16 +11,16 @@
 <body>
     <header class="header">
         <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span></div>
-        <a href="index.html" class="back-link" style="color:var(--accent);"><i class="fas fa-arrow-left"></i> Quay lại</a>
+        <a href="index.html" class="back-link" style="color:var(--accent);"><i class="fas fa-arrow-left"></i> Về trang chủ</a>
     </header>
     <main class="container">
         <div class="profile-card" style="max-width:800px; margin:0 auto;">
             <h2><i class="fas fa-upload"></i> Gửi code mới</h2>
-            <p>Đóng góp source code của bạn cho cộng đồng. Sau khi gửi, admin sẽ kiểm duyệt và đăng lên trang chủ.</p>
+            <p>Đóng góp source code của bạn cho cộng đồng. Sau khi gửi, admin sẽ kiểm duyệt.</p>
             <form id="submitCodeForm" class="profile-form">
                 <div class="form-group">
                     <label>Tên code *</label>
-                    <input type="text" id="submitName" required placeholder="VD: Code game Flappy Bird">
+                    <input type="text" id="submitName" required>
                 </div>
                 <div class="form-group">
                     <label>Danh mục *</label>
@@ -33,23 +33,23 @@
                 </div>
                 <div class="form-group">
                     <label>Link ảnh bìa (URL) *</label>
-                    <input type="url" id="submitCover" required placeholder="https://...">
+                    <input type="url" id="submitCover" required>
                 </div>
                 <div class="form-group">
                     <label>Link ảnh demo (cách nhau bằng dấu phẩy)</label>
-                    <input type="text" id="submitDemoImages" placeholder="https://... , https://...">
+                    <input type="text" id="submitDemoImages" placeholder="url1, url2">
                 </div>
                 <div class="form-group">
                     <label>Mô tả *</label>
-                    <textarea id="submitDesc" rows="3" required placeholder="Mô tả ngắn gọn về code..."></textarea>
+                    <textarea id="submitDesc" rows="3" required></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Link tải (Mediafire / Google Drive) *</label>
+                    <label>Link tải (Mediafire / Drive) *</label>
                     <input type="url" id="submitDownloadLink" required>
                 </div>
                 <div class="form-group">
                     <label>Lỗi thường gặp & hướng dẫn</label>
-                    <textarea id="submitNotes" rows="2" placeholder="Ví dụ: - Cần chạy live server..."></textarea>
+                    <textarea id="submitNotes" rows="2"></textarea>
                 </div>
                 <button type="submit" class="save-btn"><i class="fas fa-paper-plane"></i> Gửi duyệt</button>
             </form>
@@ -90,20 +90,20 @@
             const submitData = {
                 userId: user.uid,
                 userEmail: user.email,
-                name: name,
-                category: category,
-                cover: cover,
-                demoImages: demoImages,
-                description: description,
-                downloadLink: downloadLink,
-                notes: notes,
-                status: 'pending', // pending, approved, rejected
+                name,
+                category,
+                cover,
+                demoImages,
+                description,
+                downloadLink,
+                notes,
+                status: 'pending',
                 submittedAt: new Date()
             };
 
             try {
                 await addDoc(collection(db, 'submitted_codes'), submitData);
-                alert('Đã gửi code thành công! Admin sẽ xem xét và đăng lên trang chủ.');
+                alert('Đã gửi thành công! Admin sẽ xem xét.');
                 form.reset();
             } catch (err) {
                 alert('Lỗi: ' + err.message);
