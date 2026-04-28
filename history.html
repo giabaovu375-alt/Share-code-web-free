@@ -18,7 +18,50 @@
         <div id="historyList"></div>
     </main>
     <footer class="footer"><p>© 2025 CodeHub – Chia sẻ code miễn phí</p></footer>
-    <script type="module" src="js/firebase-config.js"></script>
-    <script type="module" src="js/app.js"></script>
+    <script type="module">
+        import { auth, db, onAuthStateChanged, collection, query, where, getDocs, orderBy } from './js/firebase-config.js';
+
+        const historyContainer = document.getElementById('historyList');
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                historyContainer.innerHTML = '<p>Vui lòng <a href="index.html">đăng nhập</a> để xem lịch sử tải.</p>';
+                return;
+            }
+            const q = query(collection(db, 'download_history'), where('userId', '==', user.uid), orderBy('downloadedAt', 'desc'));
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) {
+                historyContainer.innerHTML = '<p>Bạn chưa tải code nào.</p>';
+                return;
+            }
+            historyContainer.innerHTML = '';
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const date = data.downloadedAt?.toDate().toLocaleString() || 'N/A';
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div class="history-info">
+                        <h4>${escapeHtml(data.productName)}</h4>
+                        <p><i class="far fa-clock"></i> ${date}</p>
+                    </div>
+                    <button class="redownload-btn" data-link="${data.downloadLink}">Tải lại</button>
+                `;
+                historyContainer.appendChild(div);
+            });
+            document.querySelectorAll('.redownload-btn').forEach(btn => {
+                btn.onclick = () => window.open(btn.dataset.link, '_blank');
+            });
+        });
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+    </script>
 </body>
 </html>
