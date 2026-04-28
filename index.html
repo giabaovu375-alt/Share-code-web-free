@@ -2,62 +2,80 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodeHub - Kho Code Miễn Phí</title>
-    <base href="/Share-code-web-free/">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>CodeHub – Kho code miễn phí</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/style.css">
+    <base href="/Share-code-web-free/">
 </head>
 <body>
-    <div id="app-loading" class="app-loader">
-        <div class="spinner"></div>
-        <p>Đang khởi tạo ứng dụng...</p>
-    </div>
-
-    <div id="app" style="display:none;">
-        <header class="header">
-            <div class="header-left">
-                <a href="index.html" class="logo">
-                    <i class="fas fa-code"></i> Code<span>Hub</span>
-                </a>
-            </div>
-            <nav class="header-nav">
-                <a href="index.html" class="nav-link active">Trang chủ</a>
-                <a href="#" class="nav-link">Khám phá</a>
-                <a href="#" class="nav-link">Bảng xếp hạng</a>
-            </nav>
-            <div class="header-right" id="authContainer"></div>
-        </header>
-
-        <div class="filter-bar">
-            <div class="filter-left">
-                <button class="filter-btn active" data-cat="all">Tất cả</button>
-                <button class="filter-btn" data-cat="web-film">🎬 Web phim</button>
-                <button class="filter-btn" data-cat="web-game">🎮 Web game</button>
-                <button class="filter-btn" data-cat="web-shop">🛒 Web shop</button>
-                <button class="filter-btn" data-cat="other">📦 Khác</button>
-            </div>
-            <div class="filter-right">
-                <span class="stats-global" id="globalStats">
-                    <i class="fas fa-chart-line"></i> Đang tải...
-                </span>
+    <header class="header">
+        <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span></div>
+        <div class="user-actions" id="userActions">
+            <button id="showAuthBtn" class="btn-login"><i class="fas fa-user-plus"></i> Đăng nhập / Đăng ký</button>
+            <div id="userInfo" class="user-info hidden">
+                <img id="userAvatar" src="https://via.placeholder.com/32" alt="avatar">
+                <span id="userName"></span>
+                <a href="profile.html" class="nav-icon" title="Hồ sơ"><i class="fas fa-user-circle"></i></a>
+                <a href="history.html" class="nav-icon" title="Lịch sử tải"><i class="fas fa-history"></i></a>
+                <a href="favorites.html" class="nav-icon" title="Yêu thích"><i class="fas fa-heart"></i></a>
+                <a href="submit.html" class="nav-icon" title="Gửi code"><i class="fas fa-upload"></i></a>
+                <a href="admin.html" class="nav-icon" title="Quản trị"><i class="fas fa-user-shield"></i></a>
+                <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </div>
+    </header>
 
-        <main class="container" id="mainContent"></main>
-
-        <footer class="footer">
-            <p>© 2025 CodeHub. Mã nguồn được chia sẻ bởi cộng đồng.</p>
-        </footer>
+    <div class="filter-bar">
+        <button id="menuToggle" class="menu-btn"><i class="fas fa-bars"></i> Danh mục</button>
+        <div id="categoryMenu" class="category-menu hidden">
+            <button data-cat="all" class="cat-active">Tất cả</button>
+            <button data-cat="web-game">🎮 Game</button>
+            <button data-cat="web-shop">🛒 Shop</button>
+            <button data-cat="web-film">🎬 Phim</button>
+            <button data-cat="other">📦 Khác</button>
+        </div>
+        <div class="stats-badge">
+            <i class="fas fa-chart-line"></i> <span id="totalStats">0 lượt xem / 0 tải</span>
+        </div>
     </div>
 
-    <div id="modal-root"></div>
-    <div id="toast-root"></div>
+    <section class="hero">
+        <h1><i class="fas fa-download"></i> Tải code miễn phí</h1>
+        <p>Hàng trăm source code chất lượng, cập nhật liên tục</p>
+    </section>
+
+    <main class="container">
+        <h2 class="section-title"><i class="fas fa-fire"></i> Code nổi bật</h2>
+        <div id="productsGrid" class="products-grid"></div>
+    </main>
+
+    <div id="authModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div id="loginForm">
+                <h3>Đăng nhập</h3>
+                <input type="email" id="loginEmail" placeholder="Email" required>
+                <input type="password" id="loginPass" placeholder="Mật khẩu" required>
+                <button id="doLoginBtn" class="btn-login">Đăng nhập</button>
+                <p>Chưa có tài khoản? <a href="#" id="switchToRegister">Đăng ký ngay</a></p>
+            </div>
+            <div id="registerForm" class="hidden">
+                <h3>Đăng ký</h3>
+                <input type="email" id="regEmail" placeholder="Email" required>
+                <input type="password" id="regPass" placeholder="Mật khẩu" required>
+                <button id="doRegisterBtn" class="btn-login">Đăng ký</button>
+                <p>Đã có tài khoản? <a href="#" id="switchToLogin">Đăng nhập</a></p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>© 2026 CodeHub – Chia sẻ code miễn phí</p>
+    </footer>
 
     <script type="module" src="js/firebase-config.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>
-</html>>
+</html>
