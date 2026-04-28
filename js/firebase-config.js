@@ -1,104 +1,42 @@
-// Firebase Config - Premium (tự động thích ứng)
+// ========== FIREBASE CONFIG (ĐÃ CÓ KEY THẬT) ==========
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, setDoc, getDoc, updateDoc, increment, 
+    collection, addDoc, query, where, getDocs, deleteDoc 
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+// 🔥 Config thật từ Firebase Console của bro
 const firebaseConfig = {
-    apiKey: "AIzaSyDummyKeyForNow", // <= THAY BẰNG KEY THẬT CỦA BRO
-    authDomain: "dummy.firebaseapp.com",
-    projectId: "dummy-project",
-    storageBucket: "dummy.appspot.com",
-    messagingSenderId: "000000000000",
-    appId: "1:000000000000:web:dummy"
+    apiKey: "AIzaSyAASY-FQ0p1rTB-WwU9I1iaWVsVk4D-O6M",
+    authDomain: "codehub-9e1b4.firebaseapp.com",
+    projectId: "codehub-9e1b4",
+    storageBucket: "codehub-9e1b4.firebasestorage.app",
+    messagingSenderId: "714965808705",
+    appId: "1:714965808705:web:c6f44f0ca869db56c838c0"
 };
 
-// Khai báo các biến sẽ export
-let auth, db, storage;
-let firebaseReady = false;
+// Khởi tạo Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-async function initFirebase() {
-    // Nếu config vẫn là placeholder -> chạy offline, không crash
-    if (firebaseConfig.apiKey.includes("YOUR_API_KEY") || firebaseConfig.apiKey.includes("Dummy")) {
-        console.warn("ℹ️ Chưa có Firebase config thật. Web chạy offline.");
+console.log("✅ Firebase đã sẵn sàng với config thật!");
 
-        // Tạo một đối tượng auth giả để không làm lỗi các lời gọi auth
-        auth = {
-            onAuthStateChanged: (cb) => {
-                cb(null);
-                return () => {}; // Trả về unsubscribe function
-            },
-            signOut: async () => {},
-            currentUser: null
-        };
-        db = null;
-        storage = null;
-        return;
-    }
-
-    try {
-        const [
-            { initializeApp },
-            { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail },
-            { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, getDocs, addDoc, where, deleteDoc, orderBy },
-            { getStorage, ref, uploadBytes, getDownloadURL, deleteObject }
-        ] = await Promise.all([
-            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"),
-            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"),
-            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"),
-            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js")
-        ]);
-
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
-        storage = getStorage(app);
-        firebaseReady = true;
-        console.log("✅ Firebase đã sẵn sàng");
-    } catch (e) {
-        console.error("❌ Lỗi khởi tạo Firebase:", e);
-        // Fallback nếu lỗi
-        auth = {
-            onAuthStateChanged: (cb) => { cb(null); return () => {}; },
-            signOut: async () => {},
-            currentUser: null
-        };
-        db = null;
-        storage = null;
-    }
-}
-
-// Đợi khởi tạo xong rồi mới export
-await initFirebase();
-
-// Export các đối tượng và hàm cần thiết
-export { auth, db, storage, firebaseReady };
-
-// Export các hàm từ auth (nếu auth null thì dùng object rỗng để tránh lỗi)
-export const {
+// Export tất cả để app.js và product-detail.js dùng
+export {
+    auth, db,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
     onAuthStateChanged,
-    updateProfile,
-    sendPasswordResetEmail
-} = auth || {};
-
-// Export các hàm từ Firestore (nếu db null thì dùng object rỗng)
-export const {
-    doc,
-    setDoc,
-    getDoc,
-    updateDoc,
-    increment,
-    collection,
-    query,
-    getDocs,
-    addDoc,
-    where,
-    deleteDoc,
-    orderBy
-} = db || {};
-
-// Export các hàm từ Storage (nếu storage null thì dùng object rỗng)
-export const {
-    ref,
-    uploadBytes,
-    getDownloadURL,
-    deleteObject
-} = storage || {};
+    doc, setDoc, getDoc, updateDoc, increment,
+    collection, addDoc, query, where, getDocs, deleteDoc
+};
