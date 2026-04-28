@@ -231,3 +231,55 @@
                         <p><strong>Mô tả:</strong> ${escapeHtml(product.description)}</p>
                     </div>
                     <div class="error-box">
+                        <i class="fas fa-exclamation-triangle"></i> <strong>Lỗi thường gặp & cách khắc phục:</strong><br>
+                        ${(product.notes || 'Không có ghi chú.').replace(/\n/g, '<br>')}
+                    </div>
+                    <div class="action-buttons">
+                        <button id="downloadBtn" class="download-btn"><i class="fas fa-download"></i> Tải code ngay</button>
+                        <button id="favoriteBtn" class="favorite-btn ${isFav ? 'active' : ''}">
+                            <i class="${isFav ? 'fas' : 'far'} fa-heart"></i> ${isFav ? 'Đã yêu thích' : 'Yêu thích'}
+                        </button>
+                    </div>
+                `;
+                document.getElementById('productContent').innerHTML = html;
+
+                // Nút tải
+                document.getElementById('downloadBtn').onclick = async () => {
+                    await recordDownload();
+                    window.open(product.downloadLink, '_blank');
+                    alert('Đã chuyển đến link tải. Cảm ơn bạn!');
+                };
+                // Nút yêu thích
+                const favBtn = document.getElementById('favoriteBtn');
+                favBtn.onclick = async () => {
+                    if (!currentUser) {
+                        alert('Vui lòng đăng nhập để sử dụng tính năng yêu thích.');
+                        return;
+                    }
+                    const currentlyFav = await isFavorite();
+                    if (currentlyFav) {
+                        await removeFavorite();
+                        favBtn.innerHTML = '<i class="far fa-heart"></i> Yêu thích';
+                        favBtn.classList.remove('active');
+                    } else {
+                        await addFavorite();
+                        favBtn.innerHTML = '<i class="fas fa-heart"></i> Đã yêu thích';
+                        favBtn.classList.add('active');
+                    }
+                };
+            }
+
+            // Khởi chạy
+            (async function init() {
+                const ok = await fetchProduct();
+                if (!ok) return;
+                await incrementView();
+                onAuthStateChanged(auth, async (user) => {
+                    currentUser = user;
+                    await renderUI();
+                });
+            })();
+        }
+    </script>
+</body>
+</html>
