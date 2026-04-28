@@ -8,7 +8,7 @@
     "demoImages": [
       "images/xem-phim/xem-phim1.jpg"
     ],
-    "downloadLink": "https://www.mediafire.com/file/abc123/phim.zip/file",
+    "downloadLink": "https://www.mediafire.com/file/4fcqnjsqjqemgp1/phim6v.com.zip/file",
     "notes": "- Lỗi: Không load ảnh do path sai.\n- Cần chạy bằng live server."
   }
 ]
