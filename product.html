@@ -2,42 +2,95 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Chi tiết sản phẩm - CodeHub</title>
-    <base href="/Share-code-web-free/">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/pages.css">
+    <base href="/Share-code-web-free/">
+    <style>
+        :root { --bg: #0a0a0f; --bg-card: #111118; --border: #23232e; --text: #e4e4ed; --text-muted: #8b8b9e; --accent: #a78bfa; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+        .header { padding: 16px 20px; display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+        .back-link { color: var(--text-muted); text-decoration: none; font-weight: 500; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 24px 20px; width: 100%; flex: 1; }
+        .product-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 24px; }
+        .product-card h1 { font-size: 2rem; font-weight: 800; margin-bottom: 16px; color: #c4b5fd; }
+        .product-card p { margin-bottom: 16px; color: var(--text-muted); }
+        .product-card img { width: 100%; max-width: 300px; border-radius: 14px; margin: 8px; cursor: pointer; }
+        .btn { padding: 14px 28px; border-radius: 40px; font-weight: 700; text-decoration: none; display: inline-block; margin-top: 20px; }
+        .btn-primary { background: var(--accent); color: #0a0a0f; }
+        .error-box { background: #2a1a1a; border-left: 4px solid #f87171; padding: 20px; border-radius: 12px; color: #fca5a5; }
+        .footer { text-align: center; padding: 20px; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: auto; }
+        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 999; visibility: hidden; }
+        .lightbox.active { visibility: visible; }
+        .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 16px; }
+        .lightbox-close { position: absolute; top: 20px; right: 30px; font-size: 2rem; color: white; cursor: pointer; }
+    </style>
 </head>
 <body>
-    <div id="app-loading" class="app-loader">
-        <div class="spinner"></div>
-        <p>Đang tải sản phẩm...</p>
+    <header class="header">
+        <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Quay lại</a>
+    </header>
+
+    <main class="container">
+        <div id="content">
+            <!-- Không có spinner, không có chữ "Đang tải..." -->
+        </div>
+    </main>
+
+    <div id="lightbox" class="lightbox" onclick="this.classList.remove('active')">
+        <span class="lightbox-close">&times;</span>
+        <img src="" alt="preview" id="lightboxImg">
     </div>
 
-    <div id="app" style="display:none;">
-        <header class="header">
-            <div class="header-left">
-                <a href="index.html" class="back-btn">
-                    <i class="fas fa-arrow-left"></i> Quay lại
-                </a>
-            </div>
-            <div class="header-right" id="authContainer"></div>
-        </header>
+    <footer class="footer"><p>© 2025 CodeHub</p></footer>
 
-        <main class="container" id="productContent"></main>
+    <script>
+        (async function() {
+            const el = document.getElementById('content');
+            const params = new URLSearchParams(window.location.search);
+            const productId = params.get('id');
 
-        <footer class="footer">
-            <p>© 2025 CodeHub</p>
-        </footer>
-    </div>
+            if (!productId) {
+                el.innerHTML = '<div class="error-box">Thiếu ID sản phẩm. Ví dụ: ?id=code1</div>';
+                return;
+            }
 
-    <div id="lightbox-root"></div>
-    <div id="toast-root"></div>
+            try {
+                const res = await fetch('data/products.json');
+                if (!res.ok) throw new Error('Không tìm thấy file products.json');
+                const data = await res.json();
+                const product = data.find(p => p.id === productId);
 
-    <script type="module" src="js/firebase-config.js"></script>
-    <script type="module" src="js/app.js"></script>
+                if (!product) {
+                    el.innerHTML = `<div class="error-box">Không tìm thấy sản phẩm với id: "${productId}"</div>`;
+                    return;
+                }
+
+                // --- THÀNH CÔNG: Render sản phẩm ---
+                let html = `<div class="product-card">`;
+                html += `<h1>${product.name}</h1>`;
+                html += `<p>${product.description || ''}</p>`;
+
+                if (product.demoImages) {
+                    product.demoImages.forEach(src => {
+                        html += `<img src="${src}" alt="demo" onclick="document.getElementById('lightboxImg').src='${src}'; document.getElementById('lightbox').classList.add('active');">`;
+                    });
+                }
+
+                if (product.downloadLink) {
+                    html += `<a href="${product.downloadLink}" target="_blank" class="btn btn-primary"><i class="fas fa-download"></i> Tải code</a>`;
+                }
+
+                html += `</div>`;
+                el.innerHTML = html;
+                document.title = product.name + ' | CodeHub';
+
+            } catch (e) {
+                el.innerHTML = `<div class="error-box"><b>Lỗi:</b> ${e.message}</div>`;
+            }
+        })();
+    </script>
 </body>
 </html>
