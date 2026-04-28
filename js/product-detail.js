@@ -1,10 +1,6 @@
 /* =========================================
    CodeHub ULTIMATE – Product Detail JS
-   ĐÃ TỐI ƯU TOÀN DIỆN (10/10)
-   - Component Render nhỏ (cập nhật ko phá DOM)
-   - Firestore docID tối ưu (không scan query)
-   - Cache localStorage cho product & favorite
-   - Debounce chống spam
+   ĐÃ SỬA LỖI doc is not a function
    ========================================= */
 
 import {
@@ -32,7 +28,7 @@ const state = {
   user: null,
   stats: { views: 0, downloads: 0 },
   isFavorite: false,
-  favoriteDocId: null, // userId_productId
+  favoriteDocId: null,
 };
 
 let isDownloading = false;
@@ -57,41 +53,8 @@ function showToast(msg, isErr = false) {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2700);
 }
 
-// Debounce generic
-function debounce(fn, delay = 300) {
-  let t;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
-}
-
-// -------------------- CACHE LAYER --------------------
-const CACHE_KEY = `codehub_${productId}`;
-function loadCache() {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (Date.now() - data.time > 10 * 60 * 1000) return null; // hết hạn 10 phút
-    return data;
-  } catch { return null; }
-}
-function saveCache(product, stats, isFav, favDocId) {
-  localStorage.setItem(CACHE_KEY, JSON.stringify({
-    product, stats, isFav, favDocId,
-    time: Date.now()
-  }));
-}
-
 // -------------------- DATA --------------------
 async function fetchProduct() {
-  const cached = loadCache();
-  if (cached?.product) {
-    state.product = cached.product;
-    state.stats = cached.stats || state.stats;
-    state.isFavorite = cached.isFav || false;
-    state.favoriteDocId = cached.favDocId || null;
-    return;
-  }
-
   const res = await fetch('data/products.json');
   if (!res.ok) throw new Error('Không tải được products.json');
   const all = await res.json();
@@ -133,7 +96,7 @@ function updateStatsBadge() {
   `;
 }
 
-// -------------------- FAVORITE (Firestore docID tối ưu) --------------------
+// -------------------- FAVORITE --------------------
 async function loadFavorite() {
   if (!state.user || !db) {
     state.isFavorite = false;
@@ -141,7 +104,6 @@ async function loadFavorite() {
     return;
   }
 
-  // dùng docId = userId_productId để đọc trực tiếp (không query scan)
   const docId = `${state.user.uid}_${productId}`;
   const ref = doc(db, 'favorites', docId);
   const snap = await getDoc(ref);
@@ -149,10 +111,10 @@ async function loadFavorite() {
   state.favoriteDocId = state.isFavorite ? docId : null;
 }
 
-const toggleFavoriteDebounced = debounce(async () => {
+async function toggleFavorite() {
+  if (isFavLoading) { showToast('⏳ Đang xử lý...', true); return; }
   if (!state.user) { showToast('🔐 Đăng nhập để yêu thích', true); return; }
   if (!db) { showToast('⚠️ Firebase chưa được cấu hình', true); return; }
-  if (isFavLoading) return;
 
   isFavLoading = true;
   const btn = document.querySelector('[data-action="favorite"]');
@@ -160,8 +122,6 @@ const toggleFavoriteDebounced = debounce(async () => {
 
   const oldFavorite = state.isFavorite;
   const oldDocId = state.favoriteDocId;
-
-  // Optimistic update
   state.isFavorite = !state.isFavorite;
   updateFavoriteButton();
 
@@ -179,7 +139,6 @@ const toggleFavoriteDebounced = debounce(async () => {
       showToast('💔 Đã xóa yêu thích');
     }
   } catch (e) {
-    // Rollback
     state.isFavorite = oldFavorite;
     state.favoriteDocId = oldDocId;
     updateFavoriteButton();
@@ -188,7 +147,7 @@ const toggleFavoriteDebounced = debounce(async () => {
     isFavLoading = false;
     if (btn) btn.disabled = false;
   }
-}, 300);
+}
 
 function updateFavoriteButton() {
   const btn = document.querySelector('[data-action="favorite"]');
@@ -200,7 +159,7 @@ function updateFavoriteButton() {
 }
 
 // -------------------- DOWNLOAD --------------------
-const downloadDebounced = debounce(async () => {
+async function download() {
   const link = state.product?.downloadLink;
   if (!link || !link.startsWith('http')) {
     showToast('⚠️ Link chưa hợp lệ', true);
@@ -235,7 +194,7 @@ const downloadDebounced = debounce(async () => {
     isDownloading = false;
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> Tải code'; }
   }
-}, 300);
+}
 
 // -------------------- SHARE & COPY --------------------
 function shareProduct() {
@@ -274,7 +233,7 @@ lightbox?.addEventListener('click', (e) => {
   }
 });
 
-// -------------------- COMPONENT RENDER (cập nhật ko phá DOM) --------------------
+// -------------------- RENDER --------------------
 function renderProductHeader() {
   const header = document.querySelector('.product-header');
   if (!header) return;
@@ -362,8 +321,8 @@ el?.addEventListener('click', async (e) => {
       document.querySelectorAll('.rating-box i').forEach((s, idx) => s.style.color = idx < star ? 'var(--star, #fbbf24)' : '#4b5563');
       showToast(`⭐ Cảm ơn bạn đã đánh giá ${star} sao!`);
       break;
-    case 'download': await downloadDebounced(); break;
-    case 'favorite': await toggleFavoriteDebounced(); break;
+    case 'download': await download(); break;
+    case 'favorite': await toggleFavorite(); break;
     case 'share': shareProduct(); break;
     case 'copy': copyLink(); break;
     case 'report': await reportIssue(); break;
@@ -387,8 +346,7 @@ el?.addEventListener('click', async (e) => {
     onAuthStateChanged(auth, async (user) => {
       state.user = user;
       await loadFavorite();
-      renderActions(); // chỉ cập nhật nút, ko render lại toàn bộ
-      saveCache(state.product, state.stats, state.isFavorite, state.favoriteDocId);
+      renderActions();
       preloader?.classList.add('hidden');
     });
   } catch (e) {
