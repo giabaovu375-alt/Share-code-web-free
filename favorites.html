@@ -11,7 +11,7 @@
 <body>
     <header class="header">
         <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span></div>
-        <a href="index.html" class="back-link" style="color:var(--accent);"><i class="fas fa-arrow-left"></i> Quay lại</a>
+        <a href="index.html" class="back-link" style="color:var(--accent);"><i class="fas fa-arrow-left"></i> Về trang chủ</a>
     </header>
     <main class="container">
         <h2 class="section-title"><i class="fas fa-heart"></i> Code yêu thích</h2>
@@ -22,7 +22,7 @@
         import { auth, db, onAuthStateChanged, collection, query, where, getDocs, doc, getDoc } from './js/firebase-config.js';
 
         const favoritesGrid = document.getElementById('favoritesGrid');
-        let productsMap = new Map(); // lưu thông tin sản phẩm từ products.json
+        let productsMap = new Map();
 
         async function loadProductsJSON() {
             const res = await fetch('data/products.json');
@@ -34,7 +34,6 @@
             const q = query(collection(db, 'favorites'), where('userId', '==', userId));
             const snapshot = await getDocs(q);
             const favoriteIds = snapshot.docs.map(doc => doc.data().productId);
-            // Hiển thị sản phẩm
             favoritesGrid.innerHTML = '';
             if (favoriteIds.length === 0) {
                 favoritesGrid.innerHTML = '<p style="text-align:center;">Bạn chưa yêu thích code nào.</p>';
@@ -55,8 +54,8 @@
                         </div>
                     </div>
                     <div class="card-info">
-                        <h3>${product.name}</h3>
-                        <p>${product.description.substring(0, 60)}...</p>
+                        <h3>${escapeHtml(product.name)}</h3>
+                        <p>${escapeHtml(product.description.substring(0, 60))}...</p>
                         <div class="badge">${product.category}</div>
                     </div>
                 `;
@@ -73,6 +72,15 @@
             await loadProductsJSON();
             await loadFavorites(user.uid);
         });
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
     </script>
 </body>
 </html>
