@@ -1,9 +1,24 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, getDocs, addDoc, orderBy, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    sendPasswordResetEmail,
+    signOut, 
+    onAuthStateChanged,
+    updateProfile
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, setDoc, getDoc, updateDoc, increment, 
+    collection, query, getDocs, addDoc, where, deleteDoc, orderBy 
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { 
+    getStorage, 
+    ref, uploadBytes, getDownloadURL, deleteObject 
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
-// 👇 THAY THÔNG TIN NÀY BẰNG CẤU HÌNH THẬT CỦA CẬU (từ Firebase Console)
+// ⚠️ THAY THÔNG TIN DƯỚI ĐÂY BẰNG CONFIG CỦA DỰ ÁN FIREBASE CỦA CẬU
 const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
     authDomain: "YOUR_AUTH_DOMAIN",
@@ -18,14 +33,15 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-export { 
+export {
     auth, db, storage,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
+    sendPasswordResetEmail,
     signOut,
     onAuthStateChanged,
     updateProfile,
     doc, setDoc, getDoc, updateDoc, increment,
-    collection, query, getDocs, addDoc, orderBy, where, deleteDoc,
+    collection, query, getDocs, addDoc, where, deleteDoc, orderBy,
     ref, uploadBytes, getDownloadURL, deleteObject
 };
