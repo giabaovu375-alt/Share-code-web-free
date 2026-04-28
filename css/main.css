@@ -1,0 +1,108 @@
+:root {
+    --bg: #0a0a0f;
+    --bg-card: #111118;
+    --bg-surface: #16161f;
+    --border: #23232e;
+    --text: #e4e4ed;
+    --text-muted: #8b8b9e;
+    --accent: #a78bfa;
+    --accent-strong: #c4b5fd;
+    --danger: #f87171;
+    --success: #34d399;
+    --star: #fbbf24;
+    --gradient-1: linear-gradient(145deg, #a78bfa 0%, #818cf8 100%);
+    --gradient-2: linear-gradient(145deg, #f472b6 0%, #fb923c 100%);
+    --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    --radius-xl: 28px;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 12px; }
+::-webkit-scrollbar-thumb:hover { background: #3d3d55; }
+
+/* App Loader */
+.app-loader {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 9999; gap: 16px;
+}
+.spinner {
+    width: 56px; height: 56px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.app-loader p { color: var(--text-muted); }
+
+/* Header */
+.header {
+    background: rgba(18, 18, 26, 0.8); backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 14px 28px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+}
+.header-left, .header-right { display: flex; align-items: center; gap: 16px; }
+.logo {
+    font-size: 1.5rem; font-weight: 800;
+    background: var(--gradient-1); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; text-decoration: none;
+}
+.logo i { -webkit-text-fill-color: #a78bfa; margin-right: 6px; }
+.header-nav { display: flex; gap: 8px; }
+.nav-link {
+    color: var(--text-muted); text-decoration: none; font-weight: 500;
+    padding: 8px 16px; border-radius: 20px; transition: var(--transition);
+}
+.nav-link:hover, .nav-link.active { background: rgba(255, 255, 255, 0.05); color: white; }
+.back-btn { color: var(--text-muted); text-decoration: none; font-weight: 500; }
+
+/* Filter Bar */
+.filter-bar {
+    background: var(--bg-card); border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; justify-content: space-between;
+    align-items: center; flex-wrap: wrap; gap: 12px;
+    position: sticky; top: 0; z-index: 99;
+}
+.filter-left { display: flex; gap: 8px; flex-wrap: wrap; }
+.filter-btn {
+    padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-muted); cursor: pointer;
+    font-weight: 600; font-size: 0.9rem; transition: var(--transition);
+}
+.filter-btn:hover, .filter-btn.active { background: var(--accent); color: #0a0a0f; border-color: transparent; }
+.filter-right { color: var(--text-muted); font-size: 0.9rem; }
+
+/* Container */
+.container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; flex: 1; width: 100%; }
+
+/* Footer */
+.footer {
+    text-align: center; padding: 28px; color: var(--text-muted);
+    font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: auto;
+}
+
+/* Toast */
+.toast {
+    background: #1a1a28; backdrop-filter: blur(25px); border: 1px solid var(--accent);
+    padding: 14px 28px; border-radius: 60px; font-weight: 600;
+    transform: translateY(20px); opacity: 0; transition: 0.3s ease;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast-error { border-color: var(--danger); color: var(--danger); }
+.toast-success { border-color: var(--success); color: var(--success); }
