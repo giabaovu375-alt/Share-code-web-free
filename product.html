@@ -2,57 +2,79 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>CodeHub Premium • Chi tiết code</title>
-
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeHub - Test sản phẩm</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/product.css">
-    
-    <!-- Base path cho GitHub Pages -->
-    <base href="/Share-code-web-free/">
+    <style>
+        body { font-family: sans-serif; background: #0a0a0f; color: white; margin: 20px; }
+        .error-box { background: #2a1a1a; border-left: 4px solid red; padding: 15px; margin: 20px 0; border-radius: 8px; color: #ff9999; }
+        .product-box { background: #1a1a2e; padding: 20px; border-radius: 12px; }
+        img { max-width: 100%; height: auto; border-radius: 8px; margin: 5px; }
+        a { color: #a78bfa; }
+    </style>
 </head>
 <body>
+    <h2>Kết quả test sản phẩm</h2>
+    <div id="result"></div>
 
-    <!-- PRELOADER -->
-    <div id="preloader"><div class="loader-spinner"></div></div>
+    <script>
+        (async function() {
+            const resultDiv = document.getElementById('result');
+            // Hàm in lỗi ra màn hình
+            function showError(msg) {
+                resultDiv.innerHTML = `<div class="error-box"><b>Lỗi:</b> ${msg}</div>`;
+            }
 
-    <!-- HEADER -->
-    <header class="header">
-        <div class="logo"><i class="fas fa-code"></i> Code<span style="color:#c4b5fd;">Hub</span></div>
-        <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Quay lại</a>
-    </header>
+            // 1. Kiểm tra ID
+            const params = new URLSearchParams(window.location.search);
+            const productId = params.get('id');
+            if (!productId) {
+                showError('Bạn chưa nhập ID sản phẩm. Ví dụ: ?id=code1');
+                return;
+            }
+            resultDiv.innerHTML = 'Đang tải...';
 
-    <!-- MAIN CONTENT -->
-    <main class="container">
-        <div id="productContent">
-            <div style="text-align:center;padding:60px;color:#8b8b9e;">
-                <i class="fas fa-spinner fa-pulse fa-2x"></i><br>Đang tải dữ liệu...
-            </div>
-        </div>
-    </main>
+            // 2. Kiểm tra file JSON
+            let response;
+            try {
+                response = await fetch('data/products.json');
+                if (!response.ok) throw new Error('Không tìm thấy file (HTTP ' + response.status + ')');
+            } catch (e) {
+                showError('Không tải được file data/products.json. Kiểm tra lại file có tồn tại trên GitHub không nhé!');
+                return;
+            }
 
-    <!-- LIGHTBOX -->
-    <div id="lightbox" class="lightbox">
-        <span class="lightbox-close">&times;</span>
-        <img src="" alt="preview" id="lightboxImg">
-    </div>
+            // 3. Kiểm tra dữ liệu
+            let products;
+            try {
+                products = await response.json();
+            } catch (e) {
+                showError('File JSON bị lỗi cú pháp. Vào kiểm tra lại dấu phẩy, ngoặc kép nhé!');
+                return;
+            }
 
-    <!-- FOOTER -->
-    <footer class="footer">
-        <p>© 2025 CodeHub Premium · Thiết kế bởi cộng đồng lập trình viên</p>
-    </footer>
+            // 4. Tìm sản phẩm
+            const product = products.find(p => p.id === productId);
+            if (!product) {
+                showError(`Không tìm thấy sản phẩm với id="${productId}". Các id hiện có: ${products.map(p => p.id).join(', ')}`);
+                return;
+            }
 
-    <!-- TOAST -->
-    <div id="toast" class="toast"></div>
-
-    <!-- Firebase Config (tùy chọn) -->
-    <script type="module" src="js/firebase-config.js"></script>
-    
-    <!-- Product Detail Logic (Premium) -->
-    <script type="module" src="js/product-detail.js"></script>
+            // 5. Thành công! Hiển thị sản phẩm
+            let html = `<div class="product-box">`;
+            html += `<h1>${product.name}</h1>`;
+            html += `<p>${product.description || ''}</p>`;
+            if (product.demoImages) {
+                product.demoImages.forEach(src => {
+                    html += `<img src="${src}" alt="demo" width="200">`;
+                });
+            }
+            if (product.downloadLink) {
+                html += `<br><a href="${product.downloadLink}" target="_blank">Tải code</a>`;
+            }
+            html += `</div>`;
+            resultDiv.innerHTML = html;
+        })();
+    </script>
 </body>
 </html>
