@@ -1,3 +1,4 @@
+// ========== CODEHUB PREMIUM – APP.JS ==========
 import { 
     auth, db,
     createUserWithEmailAndPassword,
@@ -8,11 +9,17 @@ import {
     collection, query, getDocs, addDoc, where, deleteDoc
 } from './firebase-config.js';
 
-// -------------------- XÁC ĐỊNH TRANG --------------------
+// ========== CONFIG ==========
+const DEBUG = true;
+const log = (...args) => DEBUG && console.log('[CodeHub]', ...args);
+const warn = (...args) => DEBUG && console.warn('[CodeHub]', ...args);
+const error = (...args) => DEBUG && console.error('[CodeHub]', ...args);
+
+// ========== XÁC ĐỊNH TRANG ==========
 const path = window.location.pathname;
 const isIndexPage = path === '/' || path.endsWith('index.html') || path === '';
 
-// -------------------- DOM ELEMENTS (chỉ khi ở index) --------------------
+// ========== DOM ELEMENTS ==========
 let productsGrid = null;
 let totalStatsSpan = null;
 let menuToggle = null;
@@ -26,48 +33,114 @@ if (isIndexPage) {
     categoryMenu = document.getElementById('categoryMenu');
 }
 
-// -------------------- DỮ LIỆU SẢN PHẨM --------------------
-let productsData = [];
+// ========== STATE ==========
+let allProducts = [];
+let currentUser = null;
 
-async function loadProductsJSON() {
+// ========== UTILS ==========
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[m]);
+}
+
+function showToast(msg, isError = false) {
+    let toast = document.getElementById('toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = `
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #1a1a28; color: white; padding: 14px 28px;
+            border-radius: 60px; z-index: 9999; transition: opacity 0.3s;
+            opacity: 0; border: 1px solid #a78bfa; font-weight: 600;
+            pointer-events: none;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.style.borderColor = isError ? '#f87171' : '#a78bfa';
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+}
+
+// ========== DATA LOADING ==========
+async function loadProducts() {
     try {
         const res = await fetch('data/products.json');
-        if (!res.ok) throw new Error('Không tải được products.json');
-        productsData = await res.json();
-        if (isIndexPage && productsGrid) {
-            renderProducts(productsData);
-        }
-        return productsData;
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        const data = await res.json();
+        if (!Array.isArray(data)) throw new Error('JSON không phải mảng');
+        allProducts = data;
+        log(`✅ Đã tải ${allProducts.length} sản phẩm`);
+        if (isIndexPage) renderProductGrid(allProducts);
     } catch (err) {
-        console.error("Lỗi load sản phẩm:", err);
-        return [];
+        error('❌ Lỗi tải products.json:', err);
+        if (isIndexPage && productsGrid) {
+            productsGrid.innerHTML = `<div class="error-state">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>Không tải được dữ liệu sản phẩm</p>
+                <small>${escapeHtml(err.message)}</small>
+            </div>`;
+        }
     }
 }
 
-// -------------------- HIỂN THỊ SẢN PHẨM (ĐÃ NÂNG CẤP) --------------------
-async function renderProducts(products) {
-    if (!productsGrid) return;
-    
-    let filtered = products;
-    if (currentCategory !== 'all') {
-        filtered = products.filter(p => p.category === currentCategory);
+// ========== STATS ==========
+async function getProductStats(productId) {
+    if (!db) return { views: 0, downloads: 0 };
+    try {
+        const ref = doc(db, 'stats', productId);
+        const snap = await getDoc(ref);
+        return snap.exists() ? snap.data() : { views: 0, downloads: 0 };
+    } catch (err) {
+        warn('⚠️ Không lấy được stats cho', productId);
+        return { views: 0, downloads: 0 };
     }
+}
 
-    // Xóa sạch grid
-    productsGrid.innerHTML = '';
+async function loadTotalStats() {
+    if (!totalStatsSpan || !db) return;
+    try {
+        const q = query(collection(db, 'stats'));
+        const snap = await getDocs(q);
+        let totalViews = 0, totalDownloads = 0;
+        snap.forEach(d => {
+            const data = d.data();
+            totalViews += data.views || 0;
+            totalDownloads += data.downloads || 0;
+        });
+        totalStatsSpan.textContent = `${totalViews} lượt xem / ${totalDownloads} tải`;
+    } catch (err) {
+        warn('⚠️ Không tải được tổng stats');
+        totalStatsSpan.textContent = '0 lượt xem / 0 tải';
+    }
+}
+
+// ========== RENDER PRODUCT GRID (PREMIUM) ==========
+async function renderProductGrid(products) {
+    if (!productsGrid) return;
+
+    let filtered = currentCategory === 'all'
+        ? products
+        : products.filter(p => p.category === currentCategory);
 
     if (filtered.length === 0) {
-        productsGrid.innerHTML = `<div class="empty-state">Chưa có sản phẩm nào.</div>`;
+        productsGrid.innerHTML = `<div class="empty-state">
+            <i class="fas fa-box-open fa-2x"></i>
+            <p>Chưa có sản phẩm nào trong danh mục này</p>
+        </div>`;
         return;
     }
 
-    // Tạo HTML string cho toàn bộ grid (nhanh hơn tạo DOM rời)
+    // Xây dựng HTML string để render nhanh
     let html = '';
     for (const product of filtered) {
-        // Lấy stats từ Firebase (vẫn giữ nguyên)
-        const stats = await getStats(product.id);
+        const stats = await getProductStats(product.id);
         const cover = product.cover || (product.demoImages && product.demoImages[0]) || 'https://via.placeholder.com/300x180/16213e/ffffff?text=No+Image';
-        
+        const desc = (product.description || '').substring(0, 60);
+        const cat = escapeHtml(product.category || 'khác');
+
         html += `
             <div class="product-card" onclick="window.location.href='product.html?id=${encodeURIComponent(product.id)}'">
                 <div class="card-img-wrapper">
@@ -79,98 +152,27 @@ async function renderProducts(products) {
                 </div>
                 <div class="card-info">
                     <h3>${escapeHtml(product.name)}</h3>
-                    <p>${escapeHtml((product.description || '').substring(0, 60))}...</p>
-                    <div class="badge">${escapeHtml(product.category || 'khác')}</div>
+                    <p>${escapeHtml(desc)}...</p>
+                    <span class="badge">${cat}</span>
                 </div>
             </div>
         `;
     }
-    
-    // Gán một lần duy nhất
+
     productsGrid.innerHTML = html;
 }
 
-// -------------------- THỐNG KÊ (GIỮ NGUYÊN) --------------------
-async function getStats(productId) {
-    try {
-        const statRef = doc(db, 'stats', productId);
-        const snap = await getDoc(statRef);
-        return snap.exists() ? snap.data() : { views: 0, downloads: 0 };
-    } catch (e) { return { views: 0, downloads: 0 }; }
-}
-
-async function loadTotalStats() {
-    if (!totalStatsSpan) return;
-    const q = query(collection(db, 'stats'));
-    const snapshot = await getDocs(q);
-    let totalViews = 0, totalDownloads = 0;
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        totalViews += data.views || 0;
-        totalDownloads += data.downloads || 0;
-    });
-    totalStatsSpan.innerText = `${totalViews} lượt xem / ${totalDownloads} tải`;
-}
-
-// -------------------- AUTH MODAL & APP (GIỮ NGUYÊN) --------------------
-let currentUser = null;
-const showAuthBtn = document.getElementById('showAuthBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const userInfoDiv = document.getElementById('userInfo');
-const userAvatar = document.getElementById('userAvatar');
-const userNameSpan = document.getElementById('userName');
-const modal = document.getElementById('authModal');
-const loginForm = document.getElementById('loginForm');
-const registerForm = document.getElementById('registerForm');
-const closeModal = document.querySelector('.close-modal');
-const switchToRegister = document.getElementById('switchToRegister');
-const switchToLogin = document.getElementById('switchToLogin');
-const doLoginBtn = document.getElementById('doLoginBtn');
-const doRegisterBtn = document.getElementById('doRegisterBtn');
-
+// ========== AUTH MODAL ==========
 function openModal() { if (modal) modal.classList.remove('hidden'); }
-function closeModalFunc() { if (modal) modal.classList.add('hidden'); }
-if (switchToRegister) switchToRegister.onclick = (e) => { e.preventDefault(); loginForm.classList.add('hidden'); registerForm.classList.remove('hidden'); };
-if (switchToLogin) switchToLogin.onclick = (e) => { e.preventDefault(); registerForm.classList.add('hidden'); loginForm.classList.remove('hidden'); };
-if (closeModal) closeModal.onclick = closeModalFunc;
-if (showAuthBtn) showAuthBtn.onclick = openModal;
+function closeModal() { if (modal) modal.classList.add('hidden'); }
 
-if (doRegisterBtn) {
-    doRegisterBtn.onclick = async () => {
-        const email = document.getElementById('regEmail').value;
-        const pwd = document.getElementById('regPass').value;
-        if (!email || !pwd) return alert('Nhập email và mật khẩu');
-        try {
-            const userCred = await createUserWithEmailAndPassword(auth, email, pwd);
-            await setDoc(doc(db, 'users', userCred.user.uid), { email, createdAt: new Date() });
-            alert('Đăng ký thành công! Vui lòng đăng nhập.');
-            closeModalFunc();
-            loginForm.classList.remove('hidden');
-            registerForm.classList.add('hidden');
-        } catch (err) { alert('Lỗi: ' + err.message); }
-    };
-}
-
-if (doLoginBtn) {
-    doLoginBtn.onclick = async () => {
-        const email = document.getElementById('loginEmail').value;
-        const pwd = document.getElementById('loginPass').value;
-        if (!email || !pwd) return alert('Nhập email và mật khẩu');
-        try {
-            await signInWithEmailAndPassword(auth, email, pwd);
-            closeModalFunc();
-        } catch (err) { alert('Sai email hoặc mật khẩu'); }
-    };
-}
-
-if (logoutBtn) logoutBtn.onclick = async () => { await signOut(auth); };
-
+// ========== USER UI ==========
 function updateUserUI(user) {
     if (user) {
         if (showAuthBtn) showAuthBtn.classList.add('hidden');
         if (userInfoDiv) userInfoDiv.classList.remove('hidden');
-        if (userAvatar) userAvatar.src = 'https://via.placeholder.com/32';
-        if (userNameSpan) userNameSpan.innerText = user.email.split('@')[0];
+        if (userAvatar) userAvatar.src = user.photoURL || 'https://via.placeholder.com/32';
+        if (userNameSpan) userNameSpan.textContent = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
         currentUser = user;
     } else {
         if (showAuthBtn) showAuthBtn.classList.remove('hidden');
@@ -179,82 +181,134 @@ function updateUserUI(user) {
     }
 }
 
-onAuthStateChanged(auth, (user) => {
-    updateUserUI(user);
-    if (isIndexPage) {
-        loadTotalStats();
-        if (productsData.length === 0) loadProductsJSON();
-        else renderProducts(productsData);
+// ========== EVENT LISTENERS ==========
+if (showAuthBtn) showAuthBtn.addEventListener('click', openModal);
+if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+if (switchToRegisterBtn) switchToRegisterBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginForm.classList.add('hidden');
+    registerForm.classList.remove('hidden');
+});
+if (switchToLoginBtn) switchToLoginBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    registerForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+});
+
+if (doRegisterBtn) doRegisterBtn.addEventListener('click', async () => {
+    const email = document.getElementById('regEmail')?.value;
+    const pwd = document.getElementById('regPass')?.value;
+    if (!email || !pwd) return showToast('Vui lòng nhập email và mật khẩu', true);
+    try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, pwd);
+        await setDoc(doc(db, 'users', userCred.user.uid), {
+            email,
+            createdAt: new Date()
+        });
+        showToast('🎉 Đăng ký thành công!');
+        closeModal();
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+    } catch (err) {
+        showToast('❌ ' + err.message, true);
     }
 });
 
-// -------------------- CATEGORY MENU (GIỮ NGUYÊN) --------------------
-if (isIndexPage && menuToggle) {
-    menuToggle.onclick = () => categoryMenu.classList.toggle('hidden');
-    document.querySelectorAll('.category-menu button').forEach(btn => {
+if (doLoginBtn) doLoginBtn.addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail')?.value;
+    const pwd = document.getElementById('loginPass')?.value;
+    if (!email || !pwd) return showToast('Vui lòng nhập email và mật khẩu', true);
+    try {
+        await signInWithEmailAndPassword(auth, email, pwd);
+        showToast('👋 Chào mừng trở lại!');
+        closeModal();
+    } catch (err) {
+        showToast('❌ Sai email hoặc mật khẩu', true);
+    }
+});
+
+if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+    await signOut(auth);
+    showToast('👋 Đã đăng xuất');
+});
+
+// ========== CATEGORY FILTER ==========
+if (isIndexPage && menuToggle && categoryMenu) {
+    menuToggle.addEventListener('click', () => {
+        categoryMenu.classList.toggle('hidden');
+    });
+
+    categoryMenu.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.category-menu button').forEach(b => b.classList.remove('cat-active'));
+            categoryMenu.querySelectorAll('button').forEach(b => b.classList.remove('cat-active'));
             btn.classList.add('cat-active');
             currentCategory = btn.dataset.cat;
-            renderProducts(productsData);
+            renderProductGrid(allProducts);
             categoryMenu.classList.add('hidden');
         });
     });
 }
 
-// -------------------- KHỞI TẠO --------------------
+// ========== AUTH STATE LISTENER ==========
+onAuthStateChanged(auth, (user) => {
+    updateUserUI(user);
+    if (isIndexPage) {
+        loadTotalStats();
+        // Nếu sản phẩm đã tải rồi thì render luôn với user mới
+        if (allProducts.length > 0) {
+            renderProductGrid(allProducts);
+        }
+    }
+});
+
+// ========== KHỞI TẠO ==========
 if (isIndexPage) {
-    loadProductsJSON();
-    loadTotalStats();
+    loadProducts().then(() => loadTotalStats());
 }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
+// ========== EXPORT HELPERS (dùng cho các trang khác nếu cần) ==========
+export async function incrementView(productId) {
+    if (!db) return;
+    const ref = doc(db, 'stats', productId);
+    try { await updateDoc(ref, { views: increment(1) }); }
+    catch { await setDoc(ref, { views: 1, downloads: 0 }); }
 }
 
-// Export các hàm cần thiết cho các trang khác (giữ nguyên)
-export { getStats, incrementView, incrementDownload, isFavorite, addFavorite, removeFavorite, saveDownloadHistory };
+export async function incrementDownload(productId) {
+    if (!db) return;
+    const ref = doc(db, 'stats', productId);
+    try { await updateDoc(ref, { downloads: increment(1) }); }
+    catch { await setDoc(ref, { views: 0, downloads: 1 }); }
+}
 
-// Các hàm bổ sung cho product.html, favorites.html (giữ nguyên)
-async function incrementView(productId) {
-    const statRef = doc(db, 'stats', productId);
-    await updateDoc(statRef, { views: increment(1) }).catch(async () => {
-        await setDoc(statRef, { views: 1, downloads: 0 });
-    });
-}
-async function incrementDownload(productId) {
-    const statRef = doc(db, 'stats', productId);
-    await updateDoc(statRef, { downloads: increment(1) }).catch(async () => {
-        await setDoc(statRef, { views: 0, downloads: 1 });
-    });
-}
-async function isFavorite(productId, userId) {
-    if (!userId) return false;
+export async function isFavorite(productId, userId) {
+    if (!db || !userId) return false;
     const q = query(collection(db, 'favorites'), where('userId', '==', userId), where('productId', '==', productId));
     const snap = await getDocs(q);
     return !snap.empty;
 }
-async function addFavorite(productId, userId) {
+
+export async function addFavorite(productId, userId) {
+    if (!db || !userId) return;
     await addDoc(collection(db, 'favorites'), { userId, productId, favoritedAt: new Date() });
 }
-async function removeFavorite(productId, userId) {
+
+export async function removeFavorite(productId, userId) {
+    if (!db || !userId) return;
     const q = query(collection(db, 'favorites'), where('userId', '==', userId), where('productId', '==', productId));
     const snap = await getDocs(q);
     snap.forEach(doc => deleteDoc(doc.ref));
 }
-async function saveDownloadHistory(userId, product) {
-    if (!userId) return;
+
+export async function saveDownloadHistory(userId, product) {
+    if (!db || !userId) return;
     await addDoc(collection(db, 'download_history'), {
-        userId: userId,
+        userId,
         productId: product.id,
         productName: product.name,
         downloadLink: product.downloadLink,
         downloadedAt: new Date()
     });
-        }
+    }
