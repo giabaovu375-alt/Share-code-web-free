@@ -2,98 +2,232 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chi tiết code – CodeHub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Chi tiết code – CodeHub Pro</title>
     <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        .demo-slider { display: flex; overflow-x: auto; gap: 12px; padding: 16px 0; scroll-snap-type: x mandatory; }
-        .demo-slider img { max-width: 280px; border-radius: 16px; border: 1px solid var(--border); }
-        .download-btn { background: var(--accent); color: #000; padding: 12px 28px; border-radius: 40px; font-weight: bold; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; margin-top: 20px; }
-        .favorite-btn { background: var(--bg-card); border: 1px solid var(--border); color: #ff6b6b; padding: 12px 20px; border-radius: 40px; cursor: pointer; margin-left: 16px; }
-        .favorite-btn.active { background: #ff6b6b; color: white; border-color: #ff6b6b; }
-        .error-box { background: #2a1a1a; border-left: 4px solid #ff6666; padding: 16px; margin: 20px 0; border-radius: 12px; }
+        /* Slider ảnh demo */
+        .demo-slider {
+            display: flex;
+            overflow-x: auto;
+            gap: 16px;
+            padding: 16px 0;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: thin;
+        }
+        .demo-slider img {
+            max-width: 280px;
+            width: auto;
+            height: auto;
+            border-radius: 20px;
+            scroll-snap-align: start;
+            border: 1px solid var(--border);
+            transition: transform 0.2s;
+        }
+        .demo-slider img:hover {
+            transform: scale(1.02);
+        }
+        /* Nút tải và yêu thích */
+        .action-buttons {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 24px 0;
+        }
+        .download-btn {
+            background: var(--accent);
+            color: #000;
+            padding: 14px 32px;
+            border-radius: 60px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .download-btn:hover {
+            background: var(--accent-dark);
+            transform: scale(1.02);
+        }
+        .favorite-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: #ff6b6b;
+            padding: 14px 32px;
+            border-radius: 60px;
+            cursor: pointer;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .favorite-btn.active {
+            background: #ff6b6b;
+            color: white;
+            border-color: #ff6b6b;
+        }
+        .favorite-btn i, .download-btn i {
+            font-size: 1.2rem;
+        }
+        /* Error box */
+        .error-box {
+            background: #2a1a1a;
+            border-left: 4px solid #ff6666;
+            padding: 16px 20px;
+            margin: 24px 0;
+            border-radius: 16px;
+        }
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .stats-mini {
+            background: var(--bg-surface);
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .stats-mini i {
+            margin-right: 6px;
+        }
+        @media (max-width: 600px) {
+            .demo-slider img { max-width: 220px; }
+            .action-buttons { flex-direction: column; }
+            .download-btn, .favorite-btn { justify-content: center; }
+        }
     </style>
 </head>
 <body>
     <header class="header">
-        <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span></div>
+        <div class="logo"><i class="fas fa-code"></i> Code<span class="highlight">Hub</span> Pro</div>
         <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Quay lại</a>
     </header>
-    <main id="productDetail" style="max-width:1000px;margin:0 auto;padding:20px;"></main>
-    <footer class="footer"><p>© 2025 CodeHub – Chia sẻ code miễn phí</p></footer>
+    <main class="container" style="max-width: 1000px; margin: 0 auto;">
+        <div id="productContent">
+            <div style="text-align: center; padding: 60px;">Đang tải thông tin code...</div>
+        </div>
+    </main>
+    <footer class="footer">
+        <p>© 2025 CodeHub Pro – Chia sẻ code chất lượng</p>
+    </footer>
+
     <script type="module">
-        import { auth, db, doc, getDoc, updateDoc, increment, onAuthStateChanged, addDoc, collection, query, where, getDocs, deleteDoc, setDoc } from './js/firebase-config.js';
+        import { 
+            auth, db, doc, getDoc, setDoc, updateDoc, increment, 
+            collection, addDoc, query, where, getDocs, deleteDoc,
+            onAuthStateChanged
+        } from './js/firebase-config.js';
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const productId = urlParams.get('id');
-        let product = null;
-        let currentUser = null;
+        const productId = new URLSearchParams(window.location.search).get('id');
+        if (!productId) {
+            document.getElementById('productContent').innerHTML = '<p style="color:red;">Không có mã code.</p>';
+        } else {
+            let product = null;
+            let currentUser = null;
 
-        async function loadProduct() {
-            const res = await fetch('data/products.json');
-            const products = await res.json();
-            product = products.find(p => p.id === productId);
-            if (!product) { document.getElementById('productDetail').innerHTML = '<p>Không tìm thấy sản phẩm</p>'; return; }
-            await incrementView(product.id);
-            renderProduct();
-            if (currentUser) updateFavButton(await isFavorite(product.id, currentUser.uid));
-        }
-        async function incrementView(id) {
-            const ref = doc(db, 'stats', id);
-            await updateDoc(ref, { views: increment(1) }).catch(() => setDoc(ref, { views: 1, downloads: 0 }));
-        }
-        async function incrementDownload(id) {
-            const ref = doc(db, 'stats', id);
-            await updateDoc(ref, { downloads: increment(1) }).catch(() => setDoc(ref, { views: 0, downloads: 1 }));
-        }
-        async function isFavorite(pid, uid) {
-            if (!uid) return false;
-            const q = query(collection(db, 'favorites'), where('userId', '==', uid), where('productId', '==', pid));
-            const snap = await getDocs(q);
-            return !snap.empty;
-        }
-        async function addFavorite(pid, uid) { await addDoc(collection(db, 'favorites'), { userId: uid, productId: pid, favoritedAt: new Date() }); }
-        async function removeFavorite(pid, uid) {
-            const q = query(collection(db, 'favorites'), where('userId', '==', uid), where('productId', '==', pid));
-            const snap = await getDocs(q);
-            snap.forEach(d => deleteDoc(d.ref));
-        }
-        let favBtn;
-        function updateFavButton(isFav) {
-            if (favBtn) {
-                favBtn.innerHTML = isFav ? '<i class="fas fa-heart"></i> Đã yêu thích' : '<i class="far fa-heart"></i> Yêu thích';
-                if (isFav) favBtn.classList.add('active'); else favBtn.classList.remove('active');
+            // Helper: thoát HTML
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/[&<>]/g, function(m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    return m;
+                });
             }
-        }
-        async function renderProduct() {
-            const stats = await getDoc(doc(db, 'stats', product.id)).then(s => s.exists() ? s.data() : { views: 0, downloads: 0 });
-            const demoHtml = (product.demoImages || []).map(src => `<img src="${src}">`).join('');
-            document.getElementById('productDetail').innerHTML = `
-                <h1>${product.name}</h1>
-                <div class="demo-slider">${demoHtml || '<p>Không có ảnh demo</p>'}</div>
-                <p><strong>Mô tả:</strong> ${product.description}</p>
-                <div class="error-box"><i class="fas fa-exclamation-triangle"></i> <strong>Lỗi thường gặp:</strong><br>${(product.notes || '').replace(/\n/g,'<br>')}</div>
-                <div>
-                    <button id="downloadBtn" class="download-btn"><i class="fas fa-download"></i> Tải code</button>
-                    <button id="favBtn" class="favorite-btn"><i class="far fa-heart"></i> Yêu thích</button>
-                </div>
-            `;
-            document.getElementById('downloadBtn').onclick = async () => {
-                await incrementDownload(product.id);
-                if (currentUser) await addDoc(collection(db, 'download_history'), { userId: currentUser.uid, productId: product.id, productName: product.name, downloadLink: product.downloadLink, downloadedAt: new Date() });
-                window.open(product.downloadLink, '_blank');
-            };
-            favBtn = document.getElementById('favBtn');
-            favBtn.onclick = async () => {
-                if (!currentUser) return alert('Đăng nhập để yêu thích');
-                const isFav = await isFavorite(product.id, currentUser.uid);
-                if (isFav) { await removeFavorite(product.id, currentUser.uid); updateFavButton(false); }
-                else { await addFavorite(product.id, currentUser.uid); updateFavButton(true); }
-            };
-        }
-        onAuthStateChanged(auth, async (user) => { currentUser = user; await loadProduct(); });
-    </script>
-</body>
-</html>
+
+            // Lấy sản phẩm từ products.json
+            async function fetchProduct() {
+                const res = await fetch('data/products.json');
+                const data = await res.json();
+                product = data.find(p => p.id === productId);
+                if (!product) {
+                    document.getElementById('productContent').innerHTML = '<p style="color:red;">Không tìm thấy sản phẩm.</p>';
+                    return false;
+                }
+                return true;
+            }
+
+            // Thống kê view
+            async function incrementView() {
+                const statRef = doc(db, 'stats', product.id);
+                const statSnap = await getDoc(statRef);
+                if (!statSnap.exists()) {
+                    await setDoc(statRef, { views: 1, downloads: 0 });
+                } else {
+                    await updateDoc(statRef, { views: increment(1) });
+                }
+            }
+
+            // Lấy stats
+            async function getStats() {
+                const statSnap = await getDoc(doc(db, 'stats', product.id));
+                return statSnap.exists() ? statSnap.data() : { views: 0, downloads: 0 };
+            }
+
+            // Tăng downloads + lưu lịch sử
+            async function recordDownload() {
+                const statRef = doc(db, 'stats', product.id);
+                await updateDoc(statRef, { downloads: increment(1) }).catch(() => setDoc(statRef, { views: 0, downloads: 1 }));
+                if (currentUser) {
+                    await addDoc(collection(db, 'download_history'), {
+                        userId: currentUser.uid,
+                        productId: product.id,
+                        productName: product.name,
+                        downloadLink: product.downloadLink,
+                        downloadedAt: new Date()
+                    });
+                }
+            }
+
+            // Yêu thích
+            async function isFavorite() {
+                if (!currentUser) return false;
+                const q = query(collection(db, 'favorites'), where('userId', '==', currentUser.uid), where('productId', '==', product.id));
+                const snap = await getDocs(q);
+                return !snap.empty;
+            }
+            async function addFavorite() {
+                if (!currentUser) return;
+                await addDoc(collection(db, 'favorites'), { userId: currentUser.uid, productId: product.id, favoritedAt: new Date() });
+            }
+            async function removeFavorite() {
+                if (!currentUser) return;
+                const q = query(collection(db, 'favorites'), where('userId', '==', currentUser.uid), where('productId', '==', product.id));
+                const snap = await getDocs(q);
+                snap.forEach(d => deleteDoc(d.ref));
+            }
+
+            // Render UI
+            async function renderUI() {
+                const stats = await getStats();
+                const demoImagesHtml = (product.demoImages || []).map(src => `<img src="${src}" alt="demo" loading="lazy">`).join('');
+                const isFav = await isFavorite();
+
+                const html = `
+                    <div class="product-header">
+                        <h1>${escapeHtml(product.name)}</h1>
+                        <div class="stats-mini">
+                            <i class="fas fa-eye"></i> ${stats.views} &nbsp;|&nbsp;
+                            <i class="fas fa-download"></i> ${stats.downloads}
+                        </div>
+                    </div>
+                    <div class="demo-slider">
+                        ${demoImagesHtml || '<p>Chưa có ảnh demo</p>'}
+                    </div>
+                    <div class="product-description">
+                        <p><strong>Mô tả:</strong> ${escapeHtml(product.description)}</p>
+                    </div>
+                    <div class="error-box">
