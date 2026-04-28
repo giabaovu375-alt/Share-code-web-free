@@ -1,52 +1,45 @@
-// ========== FIREBASE CONFIG ==========
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { 
-    getAuth, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
-    sendPasswordResetEmail,
-    signOut, 
-    onAuthStateChanged,
-    updateProfile
-} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { 
-    getFirestore, 
-    doc, setDoc, getDoc, updateDoc, increment, 
-    collection, query, getDocs, addDoc, where, deleteDoc, orderBy 
-} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { 
-    getStorage, 
-    ref, uploadBytes, getDownloadURL, deleteObject 
-} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
-
-// ⚠️ THAY THÔNG TIN DƯỚI ĐÂY BẰNG CONFIG THẬT CỦA BRO
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyDummyKeyForNow",
+    authDomain: "dummy.firebaseapp.com",
+    projectId: "dummy-project",
+    storageBucket: "dummy.appspot.com",
+    messagingSenderId: "000000000000",
+    appId: "1:000000000000:web:dummy"
 };
 
-// Khởi tạo Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+let auth, db, storage, firebaseReady = false;
 
-console.log("✅ Firebase đã được khởi tạo");
+async function initFirebase() {
+    if (firebaseConfig.apiKey.includes("YOUR_API_KEY") || firebaseConfig.apiKey.includes("Dummy")) {
+        console.warn("⚠️ Firebase chưa được cấu hình. Chạy ở chế độ offline.");
+        auth = { onAuthStateChanged: (cb) => cb(null), signOut: async () => {}, currentUser: null };
+        db = null;
+        storage = null;
+        return;
+    }
+    try {
+        const [{ initializeApp }, { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail }, { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, getDocs, addDoc, where, deleteDoc, orderBy }, { getStorage, ref, uploadBytes, getDownloadURL, deleteObject }] = await Promise.all([
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"),
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"),
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"),
+            import("https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js")
+        ]);
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        storage = getStorage(app);
+        firebaseReady = true;
+        console.log("✅ Firebase đã sẵn sàng");
+    } catch (e) {
+        console.error("❌ Lỗi khởi tạo Firebase:", e);
+        auth = { onAuthStateChanged: (cb) => cb(null), signOut: async () => {} };
+        db = null;
+    }
+}
 
-// Export tất cả để các file khác dùng
-export {
-    auth, db, storage,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    sendPasswordResetEmail,
-    signOut,
-    onAuthStateChanged,
-    updateProfile,
-    doc, setDoc, getDoc, updateDoc, increment,
-    collection, query, getDocs, addDoc, where, deleteDoc, orderBy,
-    ref, uploadBytes, getDownloadURL, deleteObject
-};
+await initFirebase();
+
+export { auth, db, storage, firebaseReady };
+export const { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail } = auth;
+export const { doc, setDoc, getDoc, updateDoc, increment, collection, query, getDocs, addDoc, where, deleteDoc, orderBy } = db || {};
+export const { ref, uploadBytes, getDownloadURL, deleteObject } = storage || {};
