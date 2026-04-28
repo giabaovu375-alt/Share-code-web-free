@@ -1,22 +1,32 @@
 [
-    {
-        "id": "code1",
-        "name": "Code Website Xem Phim,
-        "category": "web-phim",
-        "cover": "images/phim1.jpg",
-        "demoImages": ["images/phim1_1.jpg", "images/phim1_2.jpg"],
-        "description": "CODE WEBSITE XEM PHIM VER6",
-        "downloadLink": "https://www.mediafire.com/file/4fcqnjsqjqemgp1/phim6v.com.zip/file",
-        "notes": "- Lỗi: không load ảnh do path sai.\n- Cần chạy bằng live server."
-    },
-    {
-        "id": "code2",
-        "name": "Web Shop Giày Thể Thao",
-        "category": "web-shop",
-        "cover": "images/shop1.jpg",
-        "demoImages": ["images/shop1_1.jpg", "images/shop1_2.jpg", "images/shop1_3.jpg"],
-        "description": "Giao diện shop giày, giỏ hàng localStorage.",
-        "downloadLink": "https://www.mediafire.com/file/yyyyy",
-        "notes": "- Chưa thanh toán.\n- Ảnh sản phẩm tự thay."
-    }
+  {
+    "id": "code1",
+    "name": "Website Xem Phim",
+    "version": "6.0",
+    "author": "CodeHub",
+    "category": "web-phim",
+    "cover": "images/xem-phim1.jpg",
+    "demoImages": [
+      "images/xem-phim1_1.jpg"
+    ],
+    "description": "Source code website xem phim trực tuyến, giao diện đẹp, có chức năng tìm kiếm, lọc phim theo thể loại.",
+    "downloadLink": "https://www.mediafire.com/file/abc123/phim.zip/file",
+    "notes": "- Lỗi: Không load ảnh do path sai.\n- Cần chạy bằng live server."
+  },
+  {
+    "id": "code2",
+    "name": "Shop Giày Thể Thao",
+    "version": "2.0",
+    "author": "CodeHub",
+    "category": "web-shop",
+    "cover": "images/thumb2.jpg",
+    "demoImages": [
+      "images/demo2_1.jpg",
+      "images/demo2_2.jpg",
+      "images/demo2_3.jpg"
+    ],
+    "description": "Giao diện shop giày responsive, giỏ hàng dùng localStorage, tối ưu mobile.",
+    "downloadLink": "https://www.mediafire.com/file/xyz789/shop.zip/file",
+    "notes": "- Chưa có chức năng thanh toán.\n- Ảnh sản phẩm tự thay."
+  }
 ]
