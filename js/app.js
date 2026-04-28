@@ -1,37 +1,41 @@
-// js/app.js - Đã fix lỗi loading treo vĩnh viễn
+// Bản debug tạm thời - Chỉ tắt loading và hiển thị nội dung tĩnh
 import { initAuth } from './components/AuthModal.js';
-import { initIndexPage } from './pages/index.js';
-import { initProductPage } from './pages/product.js';
 
+const appEl = document.getElementById('app');
+const loaderEl = document.getElementById('app-loading');
+const mainContent = document.getElementById('mainContent');
+const productContent = document.getElementById('productContent');
 const path = window.location.pathname;
 
-async function bootApp() {
-    // Luôn ẩn loading khi xong, dù thành công hay thất bại
-    const loader = document.getElementById('app-loading');
-    const app = document.getElementById('app');
+// Tắt loading ngay lập tức
+if (loaderEl) loaderEl.style.display = 'none';
+if (appEl) appEl.style.display = 'block';
 
-    try {
-        // Khởi tạo Auth (modal đăng nhập) trước
-        initAuth();
+// Khởi tạo auth (vẫn giữ để test xem có lỗi không)
+initAuth();
 
-        // Xác định trang và gọi init tương ứng
-        if (path.endsWith('index.html') || path === '/' || path === '') {
-            await initIndexPage();
-        } else if (path.endsWith('product.html')) {
-            await initProductPage();
-        }
-    } catch (err) {
-        // Nếu có lỗi, hiển thị ra giao diện
-        console.error('Lỗi khởi tạo ứng dụng:', err);
-        const mainContent = document.getElementById('mainContent') || document.getElementById('productContent');
-        if (mainContent) {
-            mainContent.innerHTML = `<div class="empty-state" style="color:#f87171;">⚠️ Lỗi: ${err.message}<br><small>Vui lòng kiểm tra Console (F12) để biết chi tiết.</small></div>`;
-        }
-    } finally {
-        // Dù sao cũng phải ẩn loading, hiển thị app
-        loader.style.display = 'none';
-        app.style.display = 'block';
+// Hiển thị nội dung tạm thời
+if (path.endsWith('product.html') && productContent) {
+    const pid = new URLSearchParams(location.search).get('id');
+    if (!pid) {
+        productContent.innerHTML = '<div style="padding:40px;text-align:center;color:#f87171;">Thiếu ID sản phẩm. Ví dụ: ?id=code1</div>';
+    } else {
+        // Thử fetch sản phẩm và hiển thị
+        fetch('data/products.json')
+            .then(r => r.json())
+            .then(data => {
+                const product = data.find(p => p.id === pid);
+                if (!product) {
+                    productContent.innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">Không tìm thấy sản phẩm với id: ${pid}</div>`;
+                } else {
+                    productContent.innerHTML = `<h1>${product.name}</h1><p>${product.description}</p>`;
+                    document.title = product.name + ' | CodeHub';
+                }
+            })
+            .catch(err => {
+                productContent.innerHTML = `<div style="padding:40px;text-align:center;color:#f87171;">Lỗi: ${err.message}</div>`;
+            });
     }
+} else if (mainContent) {
+    mainContent.innerHTML = '<div style="padding:40px;text-align:center;">Trang chủ CodeHub Premium.</div>';
 }
-
-bootApp();
