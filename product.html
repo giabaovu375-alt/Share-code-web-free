@@ -3,38 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>CodeHub - Chi tiết</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@400;600;700&display=swap" rel="stylesheet">
+    <title>CodeHub Premium • Chi tiết code</title>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="css/product.css">
-    <!-- Thẻ base giúp đường dẫn luôn đúng trên GitHub Pages -->
+    
+    <!-- Base path cho GitHub Pages -->
     <base href="/Share-code-web-free/">
 </head>
 <body>
+
+    <!-- PRELOADER -->
     <div id="preloader"><div class="loader-spinner"></div></div>
 
+    <!-- HEADER -->
     <header class="header">
         <div class="logo"><i class="fas fa-code"></i> Code<span style="color:#c4b5fd;">Hub</span></div>
         <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Quay lại</a>
     </header>
 
+    <!-- MAIN CONTENT -->
     <main class="container">
         <div id="productContent">
             <div style="text-align:center;padding:60px;color:#8b8b9e;">
-                <i class="fas fa-spinner fa-pulse fa-2x"></i><br>Đang tải...
+                <i class="fas fa-spinner fa-pulse fa-2x"></i><br>Đang tải dữ liệu...
             </div>
         </div>
     </main>
 
+    <!-- LIGHTBOX -->
     <div id="lightbox" class="lightbox">
         <span class="lightbox-close">&times;</span>
         <img src="" alt="preview" id="lightboxImg">
     </div>
 
-    <footer class="footer"><p>© 2025 CodeHub Premium</p></footer>
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p>© 2025 CodeHub Premium · Thiết kế bởi cộng đồng lập trình viên</p>
+    </footer>
+
+    <!-- TOAST -->
     <div id="toast" class="toast"></div>
 
-    <!-- Chỉ còn file product-detail.js, không cần firebase-config.js -->
-    <script src="js/product-detail.js"></script>
+    <!-- Firebase Config (tùy chọn) -->
+    <script type="module" src="js/firebase-config.js"></script>
+    
+    <!-- Product Detail Logic (Premium) -->
+    <script type="module" src="js/product-detail.js"></script>
 </body>
 </html>
