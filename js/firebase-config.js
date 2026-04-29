@@ -1,4 +1,4 @@
-// ========== FIREBASE CONFIG (CHUẨN MODULE) ==========
+// ========== FIREBASE CONFIG (ĐÃ SỬA LỖI) ==========
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -13,10 +13,9 @@ const firebaseConfig = {
     measurementId: "G-JZX5SX1Y3K"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Đây chính là 3 dòng "thần thánh" mà bro đã nói
+export const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 
-console.log("✅ Firebase đã sẵn sàng!");
-
-export { app, auth, db };
+console.log("✅ Firebase đã sẵn sàng! Biến db là:", db);
