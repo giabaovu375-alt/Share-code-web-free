@@ -191,4 +191,3 @@ el?.addEventListener('click', e => {
         preloader?.classList.add('hidden');
     }
 })();
-                            
