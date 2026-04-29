@@ -1,9 +1,14 @@
-// Import auth và db từ file cấu hình của mình
+// ========== PHẦN IMPORT ĐÃ SỬA (THAY THẾ PHẦN IMPORT CŨ) ==========
 import { auth, db } from './firebase-config.js';
 
-// Import trực tiếp các hàm cần dùng từ CDN của Firebase
+// Import trực tiếp các hàm cần thiết từ CDN của Firebase
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+// ========== GIỮ NGUYÊN TOÀN BỘ CODE CÒN LẠI (TỪ DOM REFS TRỞ ĐI) ==========
+const el = document.getElementById('productContent');
+const toast = document.getElementById('toast');
+// ... (tất cả các dòng còn lại của bro)
 
 // -------------------- DOM REFS --------------------
 const el = document.getElementById('productContent');
