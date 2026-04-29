@@ -1,8 +1,9 @@
-import {
-    auth, db, onAuthStateChanged,
-    doc, setDoc, getDoc, updateDoc, increment,
-    collection, addDoc, deleteDoc
-} from './firebase-config.js';
+// Import auth và db từ file cấu hình của mình
+import { auth, db } from './firebase-config.js';
+
+// Import trực tiếp các hàm cần dùng từ CDN của Firebase
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // -------------------- DOM REFS --------------------
 const el = document.getElementById('productContent');
