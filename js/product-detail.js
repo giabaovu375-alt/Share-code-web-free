@@ -1,7 +1,7 @@
 // ========== IMPORTS ==========
 import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, setDoc, getDoc, updateDoc, increment, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, setDoc, getDoc, updateDoc, increment, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // ========== DOM REFS ==========
 const el = document.getElementById('productContent');
@@ -22,7 +22,7 @@ let lockFav = false;
 let toastTimer = null;
 
 // ========== UTILS & UI FUNCTIONS ==========
-function esc(s) { return s ? String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]) : ''; }
+const esc = s => s ? String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]) : '';
 
 function showToast(msg, err = false) {
     if (!toast) return;
@@ -45,21 +45,56 @@ function updateFavUI() {
     btn.innerHTML = isFav ? '<i class="fas fa-heart"></i> Đã thích' : '<i class="far fa-heart"></i> Yêu thích';
 }
 
+// ========== FETCH TIMEOUT (ĐÃ FIX NUỐT LỖI) ==========
+async function fetchTimeout(url, ms = 5000) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try {
+        const res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(t);
+        if (!res.ok) throw new Error('Lỗi tải dữ liệu');
+        return res.json();
+    } catch (err) {
+        clearTimeout(t);
+        if (err.name === 'AbortError') throw new Error('Timeout fetch');
+        throw err;
+    }
+}
+
+// ========== CACHE PRODUCT (ĐÃ THÊM) ==========
+function cacheProduct(data) {
+    try { localStorage.setItem('cache_products', JSON.stringify({ time: Date.now(), data })); } catch {}
+}
+
+function getCachedProduct() {
+    try {
+        const raw = localStorage.getItem('cache_products');
+        if (!raw) return null;
+        const cache = JSON.parse(raw);
+        if (Date.now() - cache.time > 300000) return null;
+        return cache.data;
+    } catch { return null; }
+}
+
 // ========== DATA LOGIC ==========
 async function loadProduct() {
-    const res = await fetch('data/products.json');
-    const all = await res.json();
-    product = all.find(p => p.id === productId);
+    if (!productId || productId.length > 50) throw new Error('ID không hợp lệ');
+
+    let data = getCachedProduct();
+    if (!data) {
+        data = await fetchTimeout('data/products.json');
+        if (!Array.isArray(data)) throw new Error('Sai format JSON');
+        cacheProduct(data);
+    }
+
+    product = data.find(p => p.id === productId);
     if (!product) throw new Error('Không tìm thấy sản phẩm');
 }
 
 async function loadStats() {
     if (!db) return;
     const ref = doc(db, 'stats', productId);
-    try {
-        const snap = await getDoc(ref);
-        stats = snap.exists() ? snap.data() : stats;
-    } catch { /* giữ nguyên stats cũ */ }
+    try { const snap = await getDoc(ref); stats = snap.exists() ? snap.data() : stats; } catch {}
 }
 
 async function incView() {
@@ -78,7 +113,7 @@ async function incView() {
             stats.views = 1;
             sessionStorage.setItem(sessionKey, '1');
             updateStatsBadge();
-        } catch { /* ignore */ }
+        } catch {}
     }
 }
 
@@ -86,12 +121,18 @@ async function incView() {
 async function toggleFav() {
     if (lockFav) return;
     if (!user) return showToast('Cần đăng nhập', true);
+
     lockFav = true;
+    const btn = document.querySelector('[data-action="favorite"]');
+    if (btn) btn.disabled = true;
+
     const oldFav = isFav;
     isFav = !isFav;
     updateFavUI();
+
     const id = `${user.uid}_${productId}`;
     const ref = doc(db, 'favorites', id);
+
     try {
         if (isFav) {
             await setDoc(ref, { userId: user.uid, productId: productId, favoritedAt: new Date() });
@@ -104,15 +145,20 @@ async function toggleFav() {
         isFav = oldFav;
         updateFavUI();
         showToast('Lỗi, thử lại', true);
-    } finally { lockFav = false; }
+    } finally {
+        lockFav = false;
+        if (btn) btn.disabled = false;
+    }
 }
 
 async function download() {
     if (lockDownload) return;
     if (!product?.downloadLink?.startsWith('http')) return showToast('Link lỗi', true);
+
     lockDownload = true;
     const btn = document.querySelector('[data-action="download"]');
-    if (btn) btn.disabled = true;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Đang tải...'; }
+
     try {
         if (db) {
             const ref = doc(db, 'stats', productId);
@@ -122,10 +168,13 @@ async function download() {
         stats.downloads++;
         updateStatsBadge();
         showToast('🚀 Đang mở link tải...');
-        setTimeout(() => window.open(product.downloadLink, '_blank'), 400);
+        setTimeout(() => {
+            const win = window.open(product.downloadLink, '_blank');
+            if (!win) showToast('⚠️ Trình duyệt chặn popup', true);
+        }, 400);
     } finally {
         lockDownload = false;
-        if (btn) btn.disabled = false;
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> Tải code'; }
     }
 }
 
@@ -143,7 +192,7 @@ function render() {
             </div>
         </div>
         <div class="slider-wrapper">
-            <div class="demo-slider">${imgs.length ? imgs.map(s => `<img src="${esc(s)}" alt="demo" data-action="lightbox" data-src="${esc(s)}">`).join('') : '<div class="no-image">Không ảnh</div>'}</div>
+            <div class="demo-slider">${imgs.length ? imgs.map(s => `<img src="${esc(s)}" alt="demo" loading="lazy" data-action="lightbox" data-src="${esc(s)}">`).join('') : '<div class="no-image">Không ảnh</div>'}</div>
         </div>
         <div class="desc-block"><strong>📖 Mô tả:</strong><br>${esc(p.description)}</div>
         ${notes?.trim() && notes !== 'Không có ghi chú.' ? `<div class="accordion open"><div class="accordion-header" data-action="toggleAccordion"><i class="fas fa-bug"></i> Lỗi thường gặp</div><div class="accordion-content">${esc(notes).replace(/\n/g, '<br>')}</div></div>` : ''}
@@ -161,21 +210,54 @@ el?.addEventListener('click', e => {
     const target = e.target.closest('[data-action]');
     if (!target) return;
     const action = target.dataset.action;
+
     if (action === 'download') download();
     if (action === 'favorite') toggleFav();
-    if (action === 'copy') { navigator.clipboard.writeText(location.href); showToast('📋 Đã copy link'); }
-    if (action === 'share') { if (navigator.share) navigator.share({title: product.name, url: location.href}); else window.open(`https://facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}`); }
+    if (action === 'copy') {
+        navigator.clipboard?.writeText(location.href)
+            .then(() => showToast('📋 Đã copy link'))
+            .catch(() => showToast('Không copy được', true));
+    }
+    if (action === 'share') {
+        navigator.share
+            ? navigator.share({ title: product.name, url: location.href }).catch(() => {})
+            : window.open(`https://facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}`);
+    }
     if (action === 'toggleAccordion') target.closest('.accordion')?.classList.toggle('open');
-    if (action === 'lightbox') { lightboxImg.src = target.dataset.src; lightbox.classList.add('active'); }
+    if (action === 'lightbox') {
+        if (!lightbox || !lightboxImg) return;
+        const img = new Image();
+        img.src = target.dataset.src;
+        img.onload = () => { lightboxImg.src = img.src; lightbox.classList.add('active'); };
+        img.onerror = () => showToast('Lỗi ảnh', true);
+    }
+    if (action === 'rate') {
+        const star = parseInt(target.dataset.star);
+        if (!star) return;
+        localStorage.setItem(`rating_${productId}`, star);
+        document.querySelectorAll('.rating-box i').forEach((s, idx) => { s.style.color = idx < star ? '#fbbf24' : '#4b5563'; });
+        showToast(`⭐ Đã đánh giá ${star} sao`);
+    }
+});
+
+lightbox?.addEventListener('click', e => {
+    if (e.target === lightbox || e.target.classList.contains('lightbox-close')) lightbox.classList.remove('active');
 });
 
 // ========== INIT ==========
 (async () => {
+    if (!productId) {
+        el.innerHTML = '<div style="text-align:center;padding:60px;">Thiếu ID sản phẩm</div>';
+        preloader?.classList.add('hidden');
+        return;
+    }
+
     try {
         await loadProduct();
         await loadStats();
         render();
         await incView();
+
         onAuthStateChanged(auth, async (u) => {
             user = u;
             if (user) {
